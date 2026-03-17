@@ -1,0 +1,44 @@
+# Ambientes virtuais
+venv/
+.venv/
+env/
+.env/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Pastas de dados e modelos versionadas normalmente
+
+
+
+# IDEs
+.vscode/
+.idea/
+*.code-workspace
+
+# Claude Code
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Variáveis de ambiente
+.env
+*.env
+
+# Logs
+*.log
+logs/
