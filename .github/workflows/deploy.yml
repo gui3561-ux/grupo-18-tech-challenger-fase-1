@@ -28,9 +28,19 @@ jobs:
       - name: Executar testes
         run: pytest tests/ -v --tb=short || true
 
+      - name: Login no Azure
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
       - name: Deploy para Azure App Service
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: azure/webapps-deploy@v3
         with:
           app-name: "churn-prediction-api"
-          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: .
+
+      - name: Logout do Azure
+        if: always() && github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: az logout
