@@ -16,18 +16,26 @@ source .venv/bin/activate
 uv pip install -r requirements.txt
 ```
 
-## Executando a API
+## API em produção
+
+A API está disponível publicamente no Azure App Service:
+
+**Base URL:** `https://churn-prediction-api.azurewebsites.net`
+
+| Rota | Método | URL completa | Descrição |
+|---|---|---|---|
+| `/api/v1/health` | GET | [/api/v1/health](https://churn-prediction-api.azurewebsites.net/api/v1/health) | Healthcheck da API |
+| `/api/v1/inference/hello` | GET | [/api/v1/inference/hello](https://churn-prediction-api.azurewebsites.net/api/v1/inference/hello) | Hello World (stub de inferência) |
+| `/docs` | GET | [/docs](https://churn-prediction-api.azurewebsites.net/docs) | Documentação interativa (Swagger UI) |
+| `/redoc` | GET | [/redoc](https://churn-prediction-api.azurewebsites.net/redoc) | Documentação alternativa (ReDoc) |
+
+## Executando a API localmente
 
 ```bash
 uvicorn src.main:app --reload
 ```
 
 Acesse a documentação interativa em [http://localhost:8000/docs](http://localhost:8000/docs).
-
-| Rota | Método | Descrição |
-|---|---|---|
-| `/api/v1/health` | GET | Healthcheck da API |
-| `/api/v1/inference/hello` | GET | Hello World (stub de inferência) |
 
 ## Executando o notebook
 
