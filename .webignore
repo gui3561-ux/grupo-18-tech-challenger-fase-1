@@ -1,0 +1,10 @@
+.venv/
+.git/
+notebooks/
+data/
+tests/
+docs/
+__pycache__/
+*.pyc
+*.ipynb
+models/

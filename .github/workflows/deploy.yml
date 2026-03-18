@@ -22,11 +22,21 @@ jobs:
       - name: Instalar uv
         run: pip install uv
 
-      - name: Instalar dependências
-        run: uv pip install -r requirements.txt --system
+      - name: Instalar dependências da API
+        run: uv pip install -r requirements-api.txt --system
 
       - name: Executar testes
         run: pytest tests/ -v --tb=short || true
+
+      - name: Preparar pacote de deploy (somente código da API)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          mkdir -p deploy_package
+          cp -r src deploy_package/
+          cp requirements-api.txt deploy_package/requirements.txt
+          cp -r .github deploy_package/ 2>/dev/null || true
+          cd deploy_package && zip -r ../deploy.zip . && cd ..
+          echo "Pacote criado: $(du -sh deploy.zip)"
 
       - name: Login no Azure
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
@@ -39,8 +49,7 @@ jobs:
         uses: azure/webapps-deploy@v3
         with:
           app-name: "churn-prediction-api"
-          package: .
-          clean: true
+          package: deploy.zip
 
       - name: Logout do Azure
         if: always() && github.ref == 'refs/heads/main' && github.event_name == 'push'
