@@ -1,0 +1,10 @@
+artifact_location: file:c:/Users/Joao Pedro/Desktop/projects/MLE_FIAP/exploracao_mvp/notebooks/../mlflow_tracking/554298265250474829/models/m-d4db1785a2574dbda33617ba2a2b7e82/artifacts
+creation_timestamp: 1773975913748
+experiment_id: '554298265250474829'
+last_updated_timestamp: 1773975917021
+model_id: m-d4db1785a2574dbda33617ba2a2b7e82
+model_type: null
+name: sklearn_model
+source_run_id: 1ebb7501e54043708ffaea7640412d08
+status: 2
+status_message: null

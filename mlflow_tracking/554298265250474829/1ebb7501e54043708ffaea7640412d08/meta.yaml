@@ -1,0 +1,14 @@
+artifact_uri: file:c:/Users/Joao Pedro/Desktop/projects/MLE_FIAP/exploracao_mvp/notebooks/../mlflow_tracking/554298265250474829/1ebb7501e54043708ffaea7640412d08/artifacts
+end_time: 1773975917032
+entry_point_name: ''
+experiment_id: '554298265250474829'
+lifecycle_stage: active
+run_id: 1ebb7501e54043708ffaea7640412d08
+run_name: XGBoost
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1773975913645
+status: 3
+tags: []
+user_id: Joao Pedro

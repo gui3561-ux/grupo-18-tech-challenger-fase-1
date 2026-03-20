@@ -1,0 +1,14 @@
+artifact_uri: file:c:/Users/Joao Pedro/Desktop/projects/MLE_FIAP/exploracao_mvp/notebooks/../mlflow_tracking/554298265250474829/f5f7a3790eaf4dbe8579990ec2d71b59/artifacts
+end_time: 1773974973745
+entry_point_name: ''
+experiment_id: '554298265250474829'
+lifecycle_stage: active
+run_id: f5f7a3790eaf4dbe8579990ec2d71b59
+run_name: Random Forest
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1773974966078
+status: 3
+tags: []
+user_id: Joao Pedro

@@ -1,0 +1,14 @@
+artifact_uri: file:c:/Users/Joao Pedro/Desktop/projects/MLE_FIAP/exploracao_mvp/notebooks/../mlflow_tracking/554298265250474829/ad0702ed910b4fa1ba43a721bb26314a/artifacts
+end_time: 1773991066659
+entry_point_name: ''
+experiment_id: '554298265250474829'
+lifecycle_stage: active
+run_id: ad0702ed910b4fa1ba43a721bb26314a
+run_name: Neural Network
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1773991061588
+status: 3
+tags: []
+user_id: Joao Pedro

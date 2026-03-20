@@ -1,0 +1,23 @@
+artifact_path: file:c:/Users/Joao Pedro/Desktop/projects/MLE_FIAP/exploracao_mvp/notebooks/../mlflow_tracking/554298265250474829/models/m-668cc64d6fd34d3cb4f895ea977f6001/artifacts
+flavors:
+  python_function:
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.sklearn
+    model_path: model.pkl
+    predict_fn: predict
+    python_version: 3.13.12
+  sklearn:
+    code: null
+    pickled_model: model.pkl
+    serialization_format: cloudpickle
+    sklearn_version: 1.8.0
+    skops_trusted_types: null
+mlflow_version: 3.10.1
+model_id: m-668cc64d6fd34d3cb4f895ea977f6001
+model_size_bytes: 760685
+model_uuid: m-668cc64d6fd34d3cb4f895ea977f6001
+prompts: null
+run_id: af2c21ad322b47dd8f77673fd8136394
+utc_time_created: '2026-03-20 03:05:00.632441'

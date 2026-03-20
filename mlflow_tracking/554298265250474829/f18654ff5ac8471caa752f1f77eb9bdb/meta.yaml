@@ -1,0 +1,14 @@
+artifact_uri: file:c:/Users/Joao Pedro/Desktop/projects/MLE_FIAP/exploracao_mvp/notebooks/../mlflow_tracking/554298265250474829/f18654ff5ac8471caa752f1f77eb9bdb/artifacts
+end_time: 1773975961442
+entry_point_name: ''
+experiment_id: '554298265250474829'
+lifecycle_stage: active
+run_id: f18654ff5ac8471caa752f1f77eb9bdb
+run_name: LightGBM
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1773975957979
+status: 3
+tags: []
+user_id: Joao Pedro

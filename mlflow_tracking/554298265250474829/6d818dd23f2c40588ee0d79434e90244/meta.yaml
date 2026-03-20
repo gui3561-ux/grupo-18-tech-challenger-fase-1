@@ -1,0 +1,14 @@
+artifact_uri: file:c:/Users/Joao Pedro/Desktop/projects/MLE_FIAP/exploracao_mvp/notebooks/../mlflow_tracking/554298265250474829/6d818dd23f2c40588ee0d79434e90244/artifacts
+end_time: 1773975068521
+entry_point_name: ''
+experiment_id: '554298265250474829'
+lifecycle_stage: active
+run_id: 6d818dd23f2c40588ee0d79434e90244
+run_name: KNN
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1773975065651
+status: 3
+tags: []
+user_id: Joao Pedro

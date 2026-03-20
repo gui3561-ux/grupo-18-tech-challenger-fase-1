@@ -1,0 +1,14 @@
+artifact_uri: file:c:/Users/Joao Pedro/Desktop/projects/MLE_FIAP/exploracao_mvp/notebooks/../mlflow_tracking/554298265250474829/38812763e8ae47739d829545facc6fde/artifacts
+end_time: 1773975037831
+entry_point_name: ''
+experiment_id: '554298265250474829'
+lifecycle_stage: active
+run_id: 38812763e8ae47739d829545facc6fde
+run_name: Gradient Boosting
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1773975034617
+status: 3
+tags: []
+user_id: Joao Pedro
