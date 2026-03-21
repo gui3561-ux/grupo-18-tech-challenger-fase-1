@@ -1,23 +1,12 @@
-from fastapi import APIRouter, Depends
-
-from src.schemas.inference import InferenceResponse
-from src.services.inference_service import HelloWorldInferenceService, InferenceServiceInterface
+from fastapi import APIRouter
+from src.schemas.inference import ChurnRequest, ChurnResponse
+from src.services.inference_service import ChurnInferenceService
 
 router = APIRouter(prefix="/inference", tags=["Inference"])
 
-
-def get_inference_service() -> InferenceServiceInterface:
-    """Factory de dependência — troque a implementação aqui quando o modelo ML estiver pronto."""
-    return HelloWorldInferenceService()
+_service = ChurnInferenceService()
 
 
-@router.get(
-    "/hello",
-    response_model=InferenceResponse,
-    summary="Hello World",
-    description="Endpoint de exemplo. Será substituído pela inferência real do modelo de ML.",
-)
-def hello_world(
-    service: InferenceServiceInterface = Depends(get_inference_service),
-) -> InferenceResponse:
-    return service.predict()
+@router.post("/predict", response_model=ChurnResponse)
+def predict_churn(request: ChurnRequest) -> ChurnResponse:
+    return _service.predict(request)
