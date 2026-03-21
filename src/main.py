@@ -1,4 +1,6 @@
 from fastapi import FastAPI
+import logging
+import sys
 
 from src.api.v1.router import api_router
 
@@ -11,8 +13,17 @@ APP_DESCRIPTION = (
 APP_VERSION = "1.0.0"
 
 
+level = logging.INFO
+logging.basicConfig(
+    level=level,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+    handlers=[logging.StreamHandler(sys.stdout)],
+)
+logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
+
+
 def create_app() -> FastAPI:
-    """Factory da aplicação FastAPI."""
     app = FastAPI(
         title=APP_TITLE,
         description=APP_DESCRIPTION,
