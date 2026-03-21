@@ -1,22 +1,81 @@
 from abc import ABC, abstractmethod
+import pickle
+import pathlib
+import pandas as pd
+import logging
+from src.schemas.inference import ChurnRequest, ChurnResponse
 
-from src.schemas.inference import InferenceResponse
+MODEL_PATH = pathlib.Path("models/neural_network_pipeline.pkl")
 
+logger = logging.getLogger(__name__)
 
 class InferenceServiceInterface(ABC):
-    """Contrato que todo serviço de inferência deve cumprir.
-
-    Ao adicionar o modelo de ML, basta criar uma nova implementação
-    desta interface sem alterar routers ou demais camadas (DIP/OCP).
-    """
 
     @abstractmethod
-    def predict(self) -> InferenceResponse:
-        """Executa uma inferência e retorna a resposta padronizada."""
+    def predict(self) -> ChurnResponse:
+        pass
 
 
-class HelloWorldInferenceService(InferenceServiceInterface):
-    """Implementação stub — será substituída pelo serviço de ML real."""
+class ChurnInferenceService(InferenceServiceInterface):
+    def __init__(self):
+        with open(MODEL_PATH, "rb") as f:
+            self._pipeline = pickle.load(f)
 
-    def predict(self) -> InferenceResponse:
-        return InferenceResponse(message="Hello, World!")
+    def predict(self, req: ChurnRequest) -> ChurnResponse:
+        df = self.__prepare_dataframe(req)
+        df = self.__feature_engineering(df)
+
+        proba = float(self._pipeline.predict_proba(df)[0, 1])
+        logger.info("Prediction done")
+        return ChurnResponse(
+            churn_probability=round(proba, 4),
+            churn_prediction=proba >= 0.5,
+            model="neural_network",
+        )
+
+    def __prepare_dataframe(self, req: ChurnRequest) -> pd.DataFrame:
+        logger.info("Preparing DataFrame")
+        data = {
+            "Tenure Months":     req.tenure_months,
+            "Monthly Charges":   req.monthly_charges,
+            "Total Charges":     req.total_charges,
+            "State":             req.state,
+            "Gender":            req.gender,
+            "Senior Citizen":    req.senior_citizen,
+            "Partner":           req.partner,
+            "Dependents":        req.dependents,
+            "Phone Service":     req.phone_service,
+            "Multiple Lines":    req.multiple_lines,
+            "Internet Service":  req.internet_service,
+            "Online Security":   req.online_security,
+            "Online Backup":     req.online_backup,
+            "Device Protection": req.device_protection,
+            "Tech Support":      req.tech_support,
+            "Streaming TV":      req.streaming_tv,
+            "Streaming Movies":  req.streaming_movies,
+            "Contract":          req.contract,
+            "Paperless Billing": req.paperless_billing,
+            "Payment Method":    req.payment_method,
+        }
+        return pd.DataFrame([data])
+
+    def __feature_engineering(self, df: pd.DataFrame) -> pd.DataFrame:
+        logger.info("Started feature engineering")
+        df["high_risk_profile"] = (
+            (df["Internet Service"] == "Fiber optic") &
+            (df["Contract"] == "Month-to-month")
+        ).astype(int)
+
+        df["isolated_senior"] = (
+            (df["Senior Citizen"] == "Yes") &
+            (df["Partner"] == "No") &
+            (df["Dependents"] == "No")
+        ).astype(int)
+
+        servicos = ["Online Security", "Online Backup", "Device Protection",
+                    "Tech Support", "Streaming TV", "Streaming Movies"]
+        df["internet_services_count"] = sum(
+            (df[c] == "Yes").astype(int) for c in servicos
+        )
+        df["cost_per_month"] = df["Monthly Charges"] / (df["Tenure Months"] + 1)
+        return df
