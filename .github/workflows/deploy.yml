@@ -49,8 +49,8 @@ jobs:
           cp src/main.py deploy_package/src/
           cp src/__init__.py deploy_package/src/
           
-          # Copiar APENAS o modelo LightGBM (melhor modelo)
-          cp models/lightgbm_pipeline.pkl deploy_package/models/
+          # Copiar APENAS o modelo Neural Network (melhor modelo)
+          cp models/neural_network_pipeline.pkl deploy_package/models/
           
           # Copiar requirements
           cp requirements-api.txt deploy_package/requirements.txt
@@ -70,8 +70,8 @@ jobs:
           **/mlflow_tracking/**
           models/gradient_boosting_pipeline.pkl
           models/knn_pipeline.pkl
+          models/lightgbm_pipeline.pkl
           models/logistic_regression_pipeline.pkl
-          models/neural_network_pipeline.pkl
           models/random_forest_pipeline.pkl
           models/svm_pipeline.pkl
           models/xgboost_pipeline.pkl
