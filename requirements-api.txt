@@ -7,6 +7,4 @@ pydantic>=2.7
 pandas>=2.2
 numpy>=1.26
 scikit-learn>=1.5
-xgboost>=2.1
 lightgbm>=4.5
-torch>=2.3

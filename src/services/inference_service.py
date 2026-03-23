@@ -5,7 +5,8 @@ import pandas as pd
 import logging
 from src.schemas.inference import ChurnRequest, ChurnResponse
 
-MODEL_PATH = pathlib.Path("models/neural_network_pipeline.pkl")
+# Melhor modelo: LightGBM (ROC-AUC: 0.8559, Recall: 0.8128)
+MODEL_PATH = pathlib.Path("models/lightgbm_pipeline.pkl")
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +31,7 @@ class ChurnInferenceService(InferenceServiceInterface):
         return ChurnResponse(
             churn_probability=round(proba, 4),
             churn_prediction=proba >= 0.5,
-            model="neural_network",
+            model="lightgbm",
         )
 
     def __prepare_dataframe(self, req: ChurnRequest) -> pd.DataFrame:

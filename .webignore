@@ -1,10 +1,60 @@
-.venv/
-.git/
-notebooks/
-data/
-tests/
-docs/
-__pycache__/
-*.pyc
-*.ipynb
-models/
+# Python cache
+**/__pycache__/**
+**/*.pyc
+**/*.pyo
+**/*.pyd
+
+# Git
+**/.git/**
+**/.gitignore
+
+# IDE
+**/.vscode/**
+**/.idea/**
+**/*.swp
+**/*.swo
+
+# Testes (não necessários em produção)
+**/tests/**
+**/test_*.py
+**/*_test.py
+**/pytest.ini
+**/conftest.py
+
+# Notebooks e documentação
+**/notebooks/**
+**/*.ipynb
+**/docs/**
+**/*.md
+**/README.md
+
+# Dados (não necessários em produção)
+**/data/**
+**/*.csv
+
+# MLflow tracking (não necessário em produção)
+**/mlflow_tracking/**
+**/mlruns/**
+
+# Modelos não utilizados em produção (apenas lightgbm_pipeline.pkl será usado)
+models/gradient_boosting_pipeline.pkl
+models/knn_pipeline.pkl
+models/logistic_regression_pipeline.pkl
+models/neural_network_pipeline.pkl
+models/random_forest_pipeline.pkl
+models/svm_pipeline.pkl
+models/xgboost_pipeline.pkl
+
+# GitHub Actions (não necessário no deploy)
+**/.github/**
+
+# Configuração de desenvolvimento
+**/.env
+**/.env.*
+**/*.env
+**/pyproject.toml
+**/setup.py
+
+# Logs
+**/*.log
+**/logs/**

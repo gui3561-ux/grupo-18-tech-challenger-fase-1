@@ -22,21 +22,67 @@ jobs:
       - name: Instalar uv
         run: pip install uv
 
-      - name: Instalar dependências da API
-        run: uv pip install -r requirements-api.txt --system
+      - name: Limpar cache do pip antes de instalar
+        run: pip cache purge || true
+
+      - name: Instalar dependências da API (sem cache)
+        run: |
+          uv pip install -r requirements-api.txt --system
+          pip cache purge || true
 
       - name: Executar testes
         run: pytest tests/ -v --tb=short || true
 
-      - name: Preparar pacote de deploy (somente código da API)
+      - name: Preparar pacote de deploy (somente código essencial)
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: |
+          # Criar estrutura mínima para deploy
           mkdir -p deploy_package
-          cp -r src deploy_package/
+          mkdir -p deploy_package/src
+          mkdir -p deploy_package/models
+          
+          # Copiar apenas código da API
+          cp -r src/api deploy_package/src/
+          cp -r src/routers deploy_package/src/
+          cp -r src/schemas deploy_package/src/
+          cp -r src/services deploy_package/src/
+          cp src/main.py deploy_package/src/
+          cp src/__init__.py deploy_package/src/
+          
+          # Copiar APENAS o modelo LightGBM (melhor modelo)
+          cp models/lightgbm_pipeline.pkl deploy_package/models/
+          
+          # Copiar requirements
           cp requirements-api.txt deploy_package/requirements.txt
-          cp -r .github deploy_package/ 2>/dev/null || true
+          
+          # Criar .webignore para o Azure
+          cat > deploy_package/.webignore << 'EOF'
+          **/__pycache__/**
+          **/*.pyc
+          **/*.pyo
+          **/.git*
+          **/tests/**
+          **/*.md
+          **/notebooks/**
+          **/data/**
+          **/docs/**
+          **/*.ipynb
+          **/mlflow_tracking/**
+          models/gradient_boosting_pipeline.pkl
+          models/knn_pipeline.pkl
+          models/logistic_regression_pipeline.pkl
+          models/neural_network_pipeline.pkl
+          models/random_forest_pipeline.pkl
+          models/svm_pipeline.pkl
+          models/xgboost_pipeline.pkl
+          EOF
+          
           cd deploy_package && zip -r ../deploy.zip . && cd ..
-          echo "Pacote criado: $(du -sh deploy.zip)"
+          
+          echo "=== Pacote de deploy ==="
+          echo "Tamanho: $(du -sh deploy.zip | cut -f1)"
+          unzip -l deploy.zip
+          echo "========================"
 
       - name: Login no Azure
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
@@ -50,6 +96,27 @@ jobs:
         with:
           app-name: "churn-prediction-api"
           package: deploy.zip
+
+      - name: Executar limpeza de cache via Azure CLI
+        if: always() && github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          echo "Executando limpeza de cache no Azure App Service..."
+          # Limpeza via Kudu API (funciona em todos os planos)
+          DEPLOYMENT_USER=$(az webapp deployment list-publishing-profiles --name churn-prediction-api --query "[?contains(@, 'MSDeploy')].userName" -o tsv 2>/dev/null || echo "")
+          DEPLOYMENT_PASS=$(az webapp deployment list-publishing-profiles --name churn-prediction-api --query "[?contains(@, 'MSDeploy')].userPWD" -o tsv 2>/dev/null || echo "")
+          APP_NAME="churn-prediction-api"
+          
+          if [ -n "$DEPLOYMENT_USER" ]; then
+            echo "Limpando temporários via Kudu API..."
+            curl -X POST "https://$APP_NAME.scm.azurewebsites.net/api/commands/bash" \
+              -u "$DEPLOYMENT_USER:$DEPLOYMENT_PASS" \
+              -H "Content-Type: application/json" \
+              -d '{"command":"rm -rf /tmp/pip* /tmp/uv* /tmp/oryx* /home/site/wwwroot/__pycache__ 2>/dev/null; pip cache purge 2>/dev/null"}' \
+              2>/dev/null || true
+          else
+            echo "Não foi possível obter credenciais para limpeza via Kudu"
+          fi
+        continue-on-error: true
 
       - name: Logout do Azure
         if: always() && github.ref == 'refs/heads/main' && github.event_name == 'push'
