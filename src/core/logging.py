@@ -22,7 +22,7 @@ def configure_logging(log_level: str = "INFO") -> None:
     )
 
     formatter = structlog.stdlib.ProcessorFormatter(
-        foreing_pre_chain=shared_processors,
+        foreign_pre_chain=shared_processors,
         processors=[
             structlog.stdlib.ProcessorFormatter.remove_processors_meta,
             structlog.processors.JSONRenderer(),
