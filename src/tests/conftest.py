@@ -1,4 +1,5 @@
 import pytest
+from contextlib import asynccontextmanager
 from fastapi.testclient import TestClient
 from unittest.mock import MagicMock
 from src.main import create_app
@@ -7,6 +8,7 @@ from src.main import create_app
 def app_model_loaded():
     app = create_app()
 
+    @asynccontextmanager
     async def mock_lifespan(app):
         app.state.model_loaded = True
         app.state.predictor = MagicMock()
@@ -19,6 +21,7 @@ def app_model_loaded():
 def app_model_degraded():
     app = create_app()
 
+    @asynccontextmanager
     async def mock_lifespan(app):
         app.state.model_loaded = False
         app.state.predictor = None
