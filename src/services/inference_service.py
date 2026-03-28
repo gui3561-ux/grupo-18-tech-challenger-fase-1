@@ -2,13 +2,19 @@ from abc import ABC, abstractmethod
 import pickle
 import pathlib
 import pandas as pd
-import logging
+import structlog
+
 from src.schemas.inference import ChurnRequest, ChurnResponse
+from pathlib import Path
 
 # Melhor modelo: LightGBM (ROC-AUC: 0.8559, Recall: 0.8128)
 MODEL_PATH = pathlib.Path("models/lightgbm_pipeline.pkl")
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
+
+
+class ModelNotLoadedError(Exception):
+    """Levantada quando o pipeline de ML não está disponível"""
 
 class InferenceServiceInterface(ABC):
 
@@ -18,9 +24,21 @@ class InferenceServiceInterface(ABC):
 
 
 class ChurnInferenceService(InferenceServiceInterface):
-    def __init__(self):
-        with open(MODEL_PATH, "rb") as f:
-            self._pipeline = pickle.load(f)
+    def __init__(self, model_path: str | Path = MODEL_PATH):
+        self._model_path = Path(model_path)
+
+        if not self._model_path.exists():
+            raise ModelNotLoadedError(
+                f"Arquivo de modelo não encontrado: {self._model_path}"
+            )
+
+        try:
+            with open(self._model_path, "rb") as f:
+                self._pipeline = pickle.load(f)
+        except Exception as exc:
+            raise ModelNotLoadedError(
+                f"Falha ao carregar o modelo em '{self._model_path}': {exc}"
+            ) from exc
 
     def predict(self, req: ChurnRequest) -> ChurnResponse:
         df = self.__prepare_dataframe(req)
