@@ -4,8 +4,7 @@ import sys
 from src.api.v1.router import api_router
 from src.core.config import settings
 from src.core.logging import configure_logging
-
-
+from src.middleware import LatencyLoggerMiddleware
 
 
 def create_app() -> FastAPI:
@@ -17,6 +16,7 @@ def create_app() -> FastAPI:
         redoc_url="/redoc",
     )
 
+    app.add_middleware(LatencyLoggerMiddleware)
     app.include_router(api_router)
 
     return app
