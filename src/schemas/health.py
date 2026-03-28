@@ -1,8 +1,7 @@
 from pydantic import BaseModel
-
+from typing import Literal
 
 class HealthResponse(BaseModel):
-    status: str
+    status: Literal["ok", "degraded"]
+    model_loaded: bool
     version: str
-
-    model_config = {"json_schema_extra": {"example": {"status": "ok", "version": "1.0.0"}}}
