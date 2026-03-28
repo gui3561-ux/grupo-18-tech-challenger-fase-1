@@ -1,33 +1,18 @@
 from fastapi import FastAPI
 import logging
 import sys
-
 from src.api.v1.router import api_router
-
-APP_TITLE = "Churn Prediction API"
-APP_DESCRIPTION = (
-    "API de inferência para o modelo de predição de churn de clientes. "
-    "Construída com FastAPI seguindo princípios SOLID e pronta para receber "
-    "um modelo de Machine Learning."
-)
-APP_VERSION = "1.0.0"
+from src.core.config import settings
+from src.core.logging import configure_logging
 
 
-level = logging.INFO
-logging.basicConfig(
-    level=level,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-    handlers=[logging.StreamHandler(sys.stdout)],
-)
-logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
 
 
 def create_app() -> FastAPI:
     app = FastAPI(
-        title=APP_TITLE,
-        description=APP_DESCRIPTION,
-        version=APP_VERSION,
+        title=settings.api_title,
+        description=settings.api_description,
+        version=settings.api_version,
         docs_url="/docs",
         redoc_url="/redoc",
     )
