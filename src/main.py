@@ -6,6 +6,7 @@ from src.core.logging import configure_logging
 from src.middleware import LatencyLoggerMiddleware
 from src.services.inference_service import ChurnInferenceService
 from src.services.inference_service import ModelNotLoadedError
+from src.metrics import model_loaded
 from pathlib import Path
 import structlog
 
@@ -20,11 +21,13 @@ async def lifespan(app: FastAPI):
         predictor = ChurnInferenceService(settings.model_path)
         app.state.predictor = predictor
         app.state.model_loaded = True
+        model_loaded.set(1)
         logger.info("startup_complete", model_path=settings.model_path)
     except ModelNotLoadedError as exc:
         logger.info("startup_model_not_found", error=str(exc))
         app.state.predictor = None
         app.state.model_loaded = False
+        model_loaded.set(0)
 
     yield
 
