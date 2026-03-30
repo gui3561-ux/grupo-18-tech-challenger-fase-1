@@ -3,8 +3,9 @@ fastapi>=0.115
 uvicorn[standard]>=0.29
 pydantic>=2.7
 
-# Inference runtime
+# Inference runtime (Neural Network)
 pandas>=2.2
 numpy>=1.26
 scikit-learn>=1.5
-lightgbm>=4.5
+torch>=2.3
+imbalanced-learn>=0.12

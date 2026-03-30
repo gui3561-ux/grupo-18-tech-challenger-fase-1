@@ -2,7 +2,7 @@ from pathlib import Path
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
-    model_path: str = "models/lightgbm_pipeline.pkl"
+    model_path: str = "models/neural_network_pipeline.pkl"
     log_level: str = "INFO"
     api_title: str = "Churn Prediction API"
     api_version: str = "1.0.0"

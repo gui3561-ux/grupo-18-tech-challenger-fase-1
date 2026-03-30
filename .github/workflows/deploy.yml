@@ -70,11 +70,12 @@ jobs:
           **/mlflow_tracking/**
           models/gradient_boosting_pipeline.pkl
           models/knn_pipeline.pkl
-          models/lightgbm_pipeline.pkl
           models/logistic_regression_pipeline.pkl
+          # neural_network_pipeline.pkl é o modelo principal - manter
           models/random_forest_pipeline.pkl
           models/svm_pipeline.pkl
           models/xgboost_pipeline.pkl
+          models/lightgbm_pipeline.pkl
           EOF
           
           cd deploy_package && zip -r ../deploy.zip . && cd ..
