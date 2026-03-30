@@ -7,8 +7,8 @@ import structlog
 from src.schemas.inference import ChurnRequest, ChurnResponse
 from pathlib import Path
 
-# Melhor modelo: LightGBM (ROC-AUC: 0.8559, Recall: 0.8128)
-MODEL_PATH = pathlib.Path("models/lightgbm_pipeline.pkl")
+# Melhor modelo: Neural Network (ROC-AUC: 0.8464 teste, 0.8541 CV)
+MODEL_PATH = pathlib.Path("models/neural_network_pipeline.pkl")
 
 logger = structlog.get_logger(__name__)
 
@@ -49,7 +49,7 @@ class ChurnInferenceService(InferenceServiceInterface):
         return ChurnResponse(
             churn_probability=round(proba, 4),
             churn_prediction=proba >= 0.5,
-            model="lightgbm",
+            model="neural_network",
         )
 
     def __prepare_dataframe(self, req: ChurnRequest) -> pd.DataFrame:
