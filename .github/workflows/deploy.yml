@@ -111,7 +111,7 @@ jobs:
           az webapp config set \
             --name churn-prediction-api \
             --resource-group rg-churn-api \
-            --startup-command "uvicorn src.main:app --host 0.0.0.0 --port 8000"
+            --app-command-line "uvicorn src.main:app --host 0.0.0.0 --port 8000"
 
       - name: Deploy para Azure App Service
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
