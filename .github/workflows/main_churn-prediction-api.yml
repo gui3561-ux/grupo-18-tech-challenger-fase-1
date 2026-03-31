@@ -1,6 +1,5 @@
-# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
-# More GitHub Actions for Azure: https://github.com/Azure/actions
-# More info on Python, GitHub Actions, and Azure App Service: https://aka.ms/python-webapps-actions
+# Deploy API de Churn Prediction no Azure App Service
+# Usa modelo neural_network (PyTorch)
 
 name: Build and deploy Python app to Azure Web App - churn-prediction-api
 
@@ -8,13 +7,23 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'src/**'
+      - 'models/**'
+      - 'requirements.txt'
+      - '.github/workflows/main_churn-prediction-api.yml'
   workflow_dispatch:
+
+env:
+  AZUREAPPSERVICE_APPNAME: churn-prediction-api
+  PYTHON_VERSION: '3.12'
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: read #This is required for actions/checkout
+      contents: read
 
     steps:
       - uses: actions/checkout@v4
@@ -22,44 +31,47 @@ jobs:
       - name: Set up Python version
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: ${{ env.PYTHON_VERSION }}
 
-      # 🛠️ Local Build Section (Optional)
-      # The following section in your workflow is designed to catch build issues early on the client side, before deployment. This can be helpful for debugging and validation. However, if this step significantly increases deployment time and early detection is not critical for your workflow, you may remove this section to streamline the deployment process.
-      - name: Create and Start virtual environment and Install dependencies
+      - name: Instalar uv
+        run: pip install uv
+
+      - name: Validar modelo neural_network
         run: |
-          python -m venv antenv
-          source antenv/bin/activate
-          pip install -r requirements.txt
-                
-      # By default, when you enable GitHub CI/CD integration through the Azure portal, the platform automatically sets the SCM_DO_BUILD_DURING_DEPLOYMENT application setting to true. This triggers the use of Oryx, a build engine that handles application compilation and dependency installation (e.g., pip install) directly on the platform during deployment. Hence, we exclude the antenv virtual environment directory from the deployment artifact to reduce the payload size. 
-      - name: Upload artifact for deployment jobs
+          if [ ! -f "models/neural_network_pipeline.pkl" ]; then
+            echo "ERRO: Modelo neural_network_pipeline.pkl não encontrado!"
+            exit 1
+          fi
+          echo "Modelo encontrado: $(ls -lh models/neural_network_pipeline.pkl)"
+
+      - name: Instalar dependências
+        run: |
+          pip install torch==2.5.0+cpu --index-url https://download.pytorch.org/whl/cpu
+          uv pip install -r requirements.txt --system --no-deps torch
+
+      - name: Upload artifact for deployment
         uses: actions/upload-artifact@v4
         with:
           name: python-app
           path: |
-            .
+            src/
+            models/
+            requirements.txt
             !antenv/
-
-      # 🚫 Opting Out of Oryx Build
-      # If you prefer to disable the Oryx build process during deployment, follow these steps:
-      # 1. Remove the SCM_DO_BUILD_DURING_DEPLOYMENT app setting from your Azure App Service Environment variables.
-      # 2. Refer to sample workflows for alternative deployment strategies: https://github.com/Azure/actions-workflow-samples/tree/master/AppService
-      
 
   deploy:
     runs-on: ubuntu-latest
     needs: build
     permissions:
-      id-token: write #This is required for requesting the JWT
-      contents: read #This is required for actions/checkout
+      id-token: write
+      contents: read
 
     steps:
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
         with:
           name: python-app
-      
+
       - name: Login to Azure
         uses: azure/login@v2
         with:
@@ -67,10 +79,31 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_D55A4B8253464FD4BC2557A4FE60A3C6 }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_BC9FD19C16614EFE82CB085073F1DE68 }}
 
-      - name: 'Deploy to Azure Web App'
+      - name: Configurar Python Runtime
+        run: |
+          az webapp config set \
+            --name ${{ env.AZUREAPPSERVICE_APPNAME }} \
+            --resource-group rg-churn-api \
+            --linux-fx-version "PYTHON|${{ env.PYTHON_VERSION }}"
+
+      - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
-        id: deploy-to-webapp
         with:
-          app-name: 'churn-prediction-api'
+          app-name: ${{ env.AZUREAPPSERVICE_APPNAME }}
           slot-name: 'Production'
-          
+
+      - name: Configurar Application Insights
+        if: success()
+        run: |
+          az webapp config appsettings set \
+            --name ${{ env.AZUREAPPSERVICE_APPNAME }} \
+            --resource-group rg-churn-api \
+            --settings \
+            APPINSIGHTS_ENABLED=true \
+            APPLICATIONINSIGHTS_CONNECTION_STRING="${{ secrets.APPLICATIONINSIGHTS_CONNECTION_STRING }}" \
+            WEBSITE_PROMETHEUS_SCRAPE_ENDPOINT="/api/v1/metrics/" \
+            SCM_DO_BUILD_DURING_DEPLOYMENT=true || true
+
+      - name: Logout do Azure
+        if: always()
+        run: az logout
