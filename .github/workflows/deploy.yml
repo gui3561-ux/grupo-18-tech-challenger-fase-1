@@ -32,7 +32,7 @@ jobs:
       - name: Instalar uv
         run: pip install uv==${{ env.UV_VERSION }}
 
-      - name: Instalar dependências de desenvolvimento
+      - name: Instalar dependências
         run: |
           uv pip install -r requirements.txt --system
           uv pip install pytest pytest-asyncio httpx --system
@@ -62,7 +62,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/uv
-          key: ${{ runner.os }}-uv-${{ hashFiles('requirements-azure.txt') }}
+          key: ${{ runner.os }}-uv-${{ hashFiles('requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-uv-
 
@@ -78,7 +78,7 @@ jobs:
       - name: Preparar ambiente de produção
         run: |
           # Criar requirements otimizado para Azure
-          cat > requirements-azure.txt << 'EOF'
+          cat > requirements.txt << 'EOF'
           # API Core - FastAPI e servidor
           fastapi==0.115.0
           uvicorn[standard]==0.34.0
@@ -113,7 +113,7 @@ jobs:
           pip install torch==2.5.0+cpu --index-url https://download.pytorch.org/whl/cpu
           
           # Depois instalar o resto
-          uv pip install -r requirements-azure.txt --system --no-deps torch
+          uv pip install -r requirements.txt --system --no-deps torch
           
           echo "✅ Dependências instaladas:"
           pip list | grep -E "(fastapi|uvicorn|torch|pandas|scikit)"
@@ -166,7 +166,7 @@ jobs:
           cp models/neural_network_pipeline.pkl deploy_package/models/
           
           # Copiar requirements otimizado
-          cp requirements-azure.txt deploy_package/requirements.txt
+          cp requirements.txt deploy_package/requirements.txt
           
           # Criar startup script para Azure
           cat > deploy_package/startup.sh << 'EOF'
@@ -218,7 +218,6 @@ jobs:
           
           # Arquivos de desenvolvimento
           requirements.txt
-          requirements-api.txt
           scripts/
           utils/
           
