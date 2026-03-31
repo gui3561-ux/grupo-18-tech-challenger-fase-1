@@ -41,11 +41,14 @@ jobs:
           mkdir -p deploy_package/src
           mkdir -p deploy_package/models
           
-          # Copiar apenas código da API
+          # Copiar apenas código da API (incluindo metrics.py)
           cp -r src/api deploy_package/src/
           cp -r src/routers deploy_package/src/
           cp -r src/schemas deploy_package/src/
           cp -r src/services deploy_package/src/
+          cp -r src/core deploy_package/src/
+          cp -r src/middleware.py deploy_package/src/
+          cp -r src/metrics.py deploy_package/src/
           cp src/main.py deploy_package/src/
           cp src/__init__.py deploy_package/src/
           
@@ -91,6 +94,25 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      - name: Configurar Runtime Python
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          echo "Configurando runtime Python 3.12..."
+          az webapp config set \
+            --name churn-prediction-api \
+            --resource-group rg-churn-api \
+            --linux-fx-version "PYTHON|3.12" \
+            --remote-debugging-enabled false
+
+      - name: Configurar Startup Command
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          echo "Configurando startup command..."
+          az webapp config set \
+            --name churn-prediction-api \
+            --resource-group rg-churn-api \
+            --startup-command "uvicorn src.main:app --host 0.0.0.0 --port 8000"
+
       - name: Deploy para Azure App Service
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: azure/webapps-deploy@v3
@@ -104,33 +126,21 @@ jobs:
           echo "Configurando Application Insights..."
           az webapp config appsettings set \
             --name churn-prediction-api \
-            --resource-group <SEU_RESOURCE_GROUP> \
+            --resource-group rg-churn-api \
             --settings \
             APPINSIGHTS_ENABLED=true \
             APPLICATIONINSIGHTS_CONNECTION_STRING="${{ secrets.APPLICATIONINSIGHTS_CONNECTION_STRING }}" \
-            WEBSITE_PROMETHEUS_SCRAPE_ENDPOINT=/api/v1/metrics/ \
-            WEBSITE_PROMETHEUS_PORT=8001
+            WEBSITE_PROMETHEUS_SCRAPE_ENDPOINT="/api/v1/metrics/" \
+            WEBSITE_PROMETHEUS_PORT=8001 \
+            SCM_DO_BUILD_DURING_DEPLOYMENT=true
         continue-on-error: true
 
       - name: Executar limpeza de cache via Azure CLI
         if: always() && github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: |
           echo "Executando limpeza de cache no Azure App Service..."
-          # Limpeza via Kudu API (funciona em todos os planos)
-          DEPLOYMENT_USER=$(az webapp deployment list-publishing-profiles --name churn-prediction-api --query "[?contains(@, 'MSDeploy')].userName" -o tsv 2>/dev/null || echo "")
-          DEPLOYMENT_PASS=$(az webapp deployment list-publishing-profiles --name churn-prediction-api --query "[?contains(@, 'MSDeploy')].userPWD" -o tsv 2>/dev/null || echo "")
-          APP_NAME="churn-prediction-api"
-          
-          if [ -n "$DEPLOYMENT_USER" ]; then
-            echo "Limpando temporários via Kudu API..."
-            curl -X POST "https://$APP_NAME.scm.azurewebsites.net/api/commands/bash" \
-              -u "$DEPLOYMENT_USER:$DEPLOYMENT_PASS" \
-              -H "Content-Type: application/json" \
-              -d '{"command":"rm -rf /tmp/pip* /tmp/uv* /tmp/oryx* /home/site/wwwroot/__pycache__ 2>/dev/null; pip cache purge 2>/dev/null"}' \
-              2>/dev/null || true
-          else
-            echo "Não foi possível obter credenciais para limpeza via Kudu"
-          fi
+          az webapp restart --name churn-prediction-api --resource-group rg-churn-api
+          echo "App Service reiniciado com sucesso"
         continue-on-error: true
 
       - name: Logout do Azure
