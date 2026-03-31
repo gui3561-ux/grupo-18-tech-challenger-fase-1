@@ -18,6 +18,7 @@ env:
   AZUREAPPSERVICE_APPNAME: churn-prediction-api
   PYTHON_VERSION: '3.12'
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+  NODE_OPTIONS: '--no-deprecation-warnings'
 
 jobs:
   build:
@@ -49,14 +50,16 @@ jobs:
           pip install torch==2.5.0+cpu --index-url https://download.pytorch.org/whl/cpu
           uv pip install -r requirements.txt --system --no-deps torch
 
+      - name: Criar pacote de deploy
+        run: |
+          zip -r deploy.zip src/ models/ requirements.txt
+
       - name: Upload artifact for deployment
         uses: actions/upload-artifact@v4
         with:
           name: python-app
           path: |
-            src/
-            models/
-            requirements.txt
+            deploy.zip
             !antenv/
 
   deploy:
@@ -91,21 +94,13 @@ jobs:
             --resource-group rg-churn-api \
             --startup-file "gunicorn src.main:app --workers 2 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000"
 
-      - name: Limpar deploy anterior
+      - name: Deploy via Azure CLI
         run: |
-          az webapp stop --name ${{ env.AZUREAPPSERVICE_APPNAME }} --resource-group rg-churn-api || true
-          sleep 5
-
-      - name: Deploy to Azure Web App
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: ${{ env.AZUREAPPSERVICE_APPNAME }}
-          slot-name: 'Production'
-
-      - name: Reiniciar App
-        if: success()
-        run: |
-          az webapp start --name ${{ env.AZUREAPPSERVICE_APPNAME }} --resource-group rg-churn-api
+          az webapp deployment source config-zip \
+            --resource-group rg-churn-api \
+            --name ${{ env.AZUREAPPSERVICE_APPNAME }} \
+            --src deploy.zip || \
+          az webapp up --resource-group rg-churn-api --name ${{ env.AZUREAPPSERVICE_APPNAME }} --zip --src deploy.zip
 
       - name: Configurar Application Insights
         if: success()
