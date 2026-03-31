@@ -19,6 +19,11 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Set up Node.js for actions
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
       - name: Instalar uv
         run: pip install uv
 
@@ -111,7 +116,7 @@ jobs:
           az webapp config set \
             --name churn-prediction-api \
             --resource-group rg-churn-api \
-            --startup-file "uvicorn src.main:app --host 0.0.0.0 --port 8000"
+            --generic-configurations '{"commandLine": "uvicorn src.main:app --host 0.0.0.0 --port 8000"}'
 
       - name: Deploy para Azure App Service
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
