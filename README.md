@@ -1,67 +1,74 @@
 # Tech Challenge Fase 1 — MVP Churn Prediction
 
-Projeto de análise exploratória e modelagem preditiva de churn utilizando o dataset **Telco Customer Churn**.
+API de predição de churn usando **FastAPI** + **Neural Network (PyTorch)**.
 
-## Pré-requisitos
+## Deploy no Azure via GitHub Actions
 
-- Python 3.10+
-- [uv](https://docs.astral.sh/uv/)
+### 1. Configurar 3 Secrets no GitHub
 
-## Setup
+Acesse: **GitHub → Settings → Secrets and variables → Actions → New repository secret**
 
+#### AZURE_CREDENTIALS
 ```bash
-# Criar o ambiente virtual e instalar dependências
-uv venv
-source .venv/bin/activate
-uv pip install -r requirements.txt
+az ad sp create-for-rbac \
+  --name "github-actions-churn-prediction-api" \
+  --role contributor \
+  --scopes "/subscriptions/$(az account show --query id -o tsv)/resourceGroups/rg-churn-api" \
+  --sdk-auth
+```
+Copie o JSON retornado e cole como secret.
+
+#### AZURE_WEBAPP_PUBLISH_PROFILE
+```bash
+az webapp deployment list-publishing-profiles \
+  --name churn-prediction-api \
+  --resource-group rg-churn-api \
+  --query '[?publishMethod=="ZipDeploy"]' -o json
+```
+Copie o JSON retornado e cole como secret.
+
+#### APPLICATIONINSIGHTS_CONNECTION_STRING (opcional)
+```bash
+az monitor app-insights component show \
+  --app churn-prediction-api-insights \
+  --resource-group rg-churn-api \
+  --query connectionString -o tsv
+```
+Copie a string retornada e cole como secret.
+
+### 2. Fazer Deploy
+```bash
+git add .
+git commit -m "feat: Azure deploy"
+git push origin main
 ```
 
-## API em produção
+O workflow `.github/workflows/deploy.yml` executa automaticamente.
 
-A API está disponível publicamente no Azure App Service:
+### 3. Verificar
+- **GitHub Actions**: https://github.com/gui3561-ux/grupo-18-tech-challenger-fase-1/actions
+- **API**: https://churn-prediction-api.azurewebsites.net/api/v1/health
 
-**Base URL:** `https://churn-prediction-api.azurewebsites.net`
+## Endpoints
 
-| Rota | Método | URL completa | Descrição |
-|---|---|---|---|
-| `/api/v1/health` | GET | [/api/v1/health](https://churn-prediction-api.azurewebsites.net/api/v1/health) | Healthcheck da API |
-| `/api/v1/inference/hello` | GET | [/api/v1/inference/hello](https://churn-prediction-api.azurewebsites.net/api/v1/inference/hello) | Hello World (stub de inferência) |
-| `/docs` | GET | [/docs](https://churn-prediction-api.azurewebsites.net/docs) | Documentação interativa (Swagger UI) |
-| `/redoc` | GET | [/redoc](https://churn-prediction-api.azurewebsites.net/redoc) | Documentação alternativa (ReDoc) |
+| Rota | Descrição |
+|------|-----------|
+| `/api/v1/health` | Healthcheck |
+| `/api/v1/inference/predict` | Predição de churn (POST) |
+| `/api/v1/metrics/` | Métricas Prometheus |
+| `/docs` | Swagger UI |
 
-## Executando a API localmente
+## Modelo Neural Network
+
+- **ROC-AUC**: 0.8464 (teste), 0.8541 (CV)
+- **Framework**: PyTorch MLP (128→64→32→1)
+- **Features**: 35 (selecionadas via SelectKBest)
+
+## Setup Local
 
 ```bash
+uv venv && source .venv/bin/activate && uv pip install -r requirements.txt
 uvicorn src.main:app --reload
-```
-
-Acesse a documentação interativa em [http://localhost:8000/docs](http://localhost:8000/docs).
-
-## Executando o notebook
-
-```bash
-jupyter notebook notebooks/eda.ipynb
-```
-
-## Estrutura do projeto
-
-```
-data/                          → Dataset Telco Customer Churn
-notebooks/                     → Notebooks de análise (EDA, modelagem)
-src/
-├── api/v1/router.py           → Agrega todos os routers na versão v1
-├── routers/
-│   ├── health.py              → Rota /health
-│   └── inference.py           → Rota /inference/hello (futura inferência ML)
-├── schemas/
-│   ├── health.py              → Schema de resposta do healthcheck
-│   └── inference.py           → Schema de resposta da inferência
-├── services/
-│   └── inference_service.py  → Interface + implementação stub do serviço de inferência
-└── main.py                    → Factory da aplicação FastAPI
-models/                        → Modelos treinados
-tests/                         → Testes
-docs/                          → Documentação
 ```
 
 ## Licença

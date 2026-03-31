@@ -36,7 +36,17 @@ O serviço já está instrumentado com `structlog` para logs estruturados em JSO
 
 ## Configuração no Azure
 
-### Opção 1: Application Insights (Recomendado - Grátis)
+### Setup Automático via GitHub Actions
+
+O workflow de deploy configurado automaticamente:
+
+1. **Application Insights**: Configurado automaticamente se `APPLICATIONINSIGHTS_CONNECTION_STRING` estiver definido
+2. **Métricas Prometheus**: Endpoint `/api/v1/metrics/` configurado para scraping
+3. **Logs estruturados**: Configurados com structlog em formato JSON
+
+### Setup Manual (Alternativo)
+
+#### Opção 1: Application Insights (Recomendado - Grátis)
 
 1. **Criar Application Insights:**
    ```bash
@@ -58,7 +68,21 @@ O serviço já está instrumentado com `structlog` para logs estruturados em JSO
 4. **O Azure coletará automaticamente:**
    - CPU, memória, requisições HTTP
    - Exceções não tratadas
-   - Logs (se configurado)
+   - Logs estruturados
+   - Dependências e performance
+
+#### Script de Configuração Automática
+
+Execute o script de setup:
+```bash
+./scripts/setup_monitoring.sh
+```
+
+Este script configura:
+- Application Insights com connection string
+- Logs de diagnóstico
+- Alertas básicos para erros HTTP
+- Integração Prometheus
 
 ### Opção 2: Prometheus Scraper (Preview Grátis)
 
@@ -184,8 +208,64 @@ churn_probability_histogram_bucket{le="0.1"} 890.0
 4. Fazer deploy e verificar métricas
 5. Importar dashboard JSON
 
+## GitHub Actions Integration
+
+O projeto inclui um workflow de CI/CD completo que configura automaticamente o monitoramento:
+
+### Secrets Necessários
+
+Configure os seguintes secrets no repositório GitHub:
+
+| Secret | Descrição | Como obter |
+|--------|-----------|------------|
+| `AZURE_CREDENTIALS` | Service Principal para deploy | `az ad sp create-for-rbac --name "github-actions-churn-api" --role contributor --scopes /subscriptions/<id>/resourceGroups/rg-churn-api --sdk-auth` |
+| `AZURE_WEBAPP_PUBLISH_PROFILE` | Perfil de publicação do App Service | `az webapp deployment list-publishing-profiles --name churn-prediction-api --resource-group rg-churn-api --query '[?publishMethod=="ZipDeploy"]'` |
+| `APPLICATIONINSIGHTS_CONNECTION_STRING` | Connection string do Application Insights | `az monitor app-insights component show --app churn-prediction-insights --resource-group rg-churn-api --query connectionString` |
+
+### Workflow de Deploy
+
+O workflow `.github/workflows/deploy.yml` inclui:
+
+1. **Testes automáticos**: Executa testes Python antes do deploy
+2. **Build otimizado**: Cache de dependências, PyTorch CPU-only
+3. **Deploy para Azure**: Configura App Service automaticamente
+4. **Configuração de monitoramento**: Application Insights, Prometheus
+5. **Health check**: Validação automática após deploy
+
+### Scripts de Suporte
+
+| Script | Descrição |
+|--------|-----------|
+| `scripts/azure_setup.sh` | Configura recursos Azure (App Service, Resource Group) |
+| `scripts/setup_monitoring.sh` | Configura Application Insights e alertas |
+| `scripts/check_deploy_prerequisites.sh` | Verifica pré-requisitos antes do deploy |
+| `scripts/health_check.sh` | Testa API após deploy |
+
+### Pipeline de CI/CD
+
+```mermaid
+flowchart LR
+    A[Push para main] --> B[GitHub Actions]
+    B --> C[Testes Python]
+    C --> D[Build otimizado]
+    D --> E[Deploy Azure]
+    E --> F[Configura Monitoramento]
+    F --> G[Health Check]
+    G --> H[✅ API Online]
+```
+
+## Próximos Passos
+
+1. Configure os secrets no GitHub
+2. Execute o script de setup: `./scripts/azure_setup.sh`
+3. Execute o script de monitoramento: `./scripts/setup_monitoring.sh`
+4. Faça push para a branch main para trigger do deploy
+5. Verifique a API: `./scripts/health_check.sh`
+
 ## Referências
 
 - [Azure Monitor Pricing](https://azure.microsoft.com/pricing/details/monitor/)
 - [Grafana Cloud Free Tier](https://grafana.com/cloud/)
 - [Prometheus Client Python](https://prometheus-client.readthedocs.io/)
+- [GitHub Actions for Azure](https://github.com/Azure/actions)
+- [Azure App Service Documentation](https://docs.microsoft.com/azure/app-service/)

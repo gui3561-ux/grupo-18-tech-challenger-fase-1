@@ -1,61 +1,102 @@
+# Azure App Service ignore file
+# Arquivos e diretórios a serem ignorados durante o deploy
+
 # Python cache
-**/__pycache__/**
+**/__pycache__/
 **/*.pyc
 **/*.pyo
 **/*.pyd
 
-# Git
-**/.git/**
-**/.gitignore
+# Ambiente virtual
+.venv/
+venv/
+env/
+ENV/
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 # IDE
-**/.vscode/**
-**/.idea/**
-**/*.swp
-**/*.swo
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 
-# Testes (não necessários em produção)
-**/tests/**
-**/test_*.py
-**/*_test.py
-**/pytest.ini
-**/conftest.py
+# Git
+.git/
+.gitignore
+.gitattributes
 
-# Notebooks e documentação
-**/notebooks/**
-**/*.ipynb
-**/docs/**
-**/*.md
-**/README.md
+# Documentação
+docs/
+*.md
+LICENSE
+README.md
+CHANGELOG.md
 
-# Dados (não necessários em produção)
-**/data/**
-**/*.csv
+# Dados e notebooks
+data/
+notebooks/
+*.ipynb
+*.ipynb_checkpoints/
 
-# MLflow tracking (não necessário em produção)
-**/mlflow_tracking/**
-**/mlruns/**
+# MLFlow tracking
+mlflow_tracking/
 
-# Modelos não utilizados em produção (apenas neural_network_pipeline.pkl será usado)
+# Modelos alternativos (manter apenas neural_network)
 models/gradient_boosting_pipeline.pkl
 models/knn_pipeline.pkl
 models/logistic_regression_pipeline.pkl
-# neural_network_pipeline.pkl é o modelo principal - NÃO excluir
 models/random_forest_pipeline.pkl
 models/svm_pipeline.pkl
 models/xgboost_pipeline.pkl
 models/lightgbm_pipeline.pkl
 
-# GitHub Actions (não necessário no deploy)
-**/.github/**
+# Scripts de desenvolvimento
+scripts/post_deploy_cleanup.sh
+utils/
 
-# Configuração de desenvolvimento
-**/.env
-**/.env.*
-**/*.env
-**/pyproject.toml
-**/setup.py
+# Configurações locais
+.env
+*.env
+.env.local
+.env.*.local
 
 # Logs
-**/*.log
-**/logs/**
+logs/
+*.log
+
+# Testes (opcional - manter se quiser rodar testes no Azure)
+# tests/
+
+# Arquivos temporários
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Azure specific
+.deployment
+deploy.cmd
+deploy.sh
+deploy.zip
+deploy_package/
+
+# Model Card
+MODEL_CARD.md
+
+# Web ignore próprio (para evitar recursão)
+.webignore

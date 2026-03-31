@@ -3,65 +3,196 @@ name: Deploy FastAPI to Azure App Service
 on:
   push:
     branches: [main]
+    paths:
+      - 'src/**'
+      - 'models/**'
+      - 'requirements*.txt'
+      - '.github/workflows/**'
   pull_request:
     branches: [main]
 
-jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
+env:
+  AZURE_WEBAPP_NAME: churn-prediction-api
+  AZURE_RESOURCE_GROUP: rg-churn-api
+  PYTHON_VERSION: '3.12'
+  UV_VERSION: '0.4.12'
 
+jobs:
+  test:
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout código
         uses: actions/checkout@v4
 
-      - name: Configurar Python 3.12
+      - name: Configurar Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
-
-      - name: Set up Node.js for actions
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
+          python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Instalar uv
-        run: pip install uv
+        run: pip install uv==${{ env.UV_VERSION }}
 
-      - name: Limpar cache do pip antes de instalar
-        run: pip cache purge || true
-
-      - name: Instalar dependências da API (sem cache)
+      - name: Instalar dependências de desenvolvimento
         run: |
-          uv pip install -r requirements-api.txt --system
-          pip cache purge || true
+          uv pip install -r requirements.txt --system
+          uv pip install pytest pytest-asyncio httpx --system
 
       - name: Executar testes
-        run: pytest tests/ -v --tb=short || true
+        run: |
+          cd src
+          python -m pytest tests/ -v --tb=short
 
-      - name: Preparar pacote de deploy (somente código essencial)
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Instalar uv
+        run: pip install uv==${{ env.UV_VERSION }}
+
+      - name: Configurar cache de dependências
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ hashFiles('requirements-azure.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
+
+      - name: Validar modelo neural_network
+        run: |
+          if [ ! -f "models/neural_network_pipeline.pkl" ]; then
+            echo "❌ ERRO: Modelo neural_network_pipeline.pkl não encontrado!"
+            echo "Execute o notebook 03_modeling.ipynb para gerar o modelo."
+            exit 1
+          fi
+          echo "✅ Modelo encontrado: $(ls -lh models/neural_network_pipeline.pkl)"
+
+      - name: Preparar ambiente de produção
+        run: |
+          # Criar requirements otimizado para Azure
+          cat > requirements-azure.txt << 'EOF'
+          # API Core - FastAPI e servidor
+          fastapi==0.115.0
+          uvicorn[standard]==0.34.0
+          pydantic==2.9.2
+          pydantic-settings==2.7.0
+          
+          # Machine Learning - PyTorch CPU only (otimizado para Azure)
+          torch==2.5.0+cpu
+          --index-url https://download.pytorch.org/whl/cpu
+          
+          # Data Processing
+          pandas==2.2.3
+          numpy==1.26.4
+          scikit-learn==1.6.1
+          joblib==1.4.2
+          
+          # Feature Engineering (apenas para inferência, não precisa do pacote completo)
+          # imbalanced-learn não é necessário em produção, apenas no treinamento
+          
+          # Monitoring e Observability
+          prometheus-client==0.21.0
+          structlog==25.5.0
+          
+          # Azure Application Insights (opcional, mas recomendado)
+          # opentelemetry-sdk==1.27.0
+          # opentelemetry-instrumentation-fastapi==0.49b0
+          EOF
+
+      - name: Instalar dependências de produção
+        run: |
+          # Instalar PyTorch primeiro com index específico
+          pip install torch==2.5.0+cpu --index-url https://download.pytorch.org/whl/cpu
+          
+          # Depois instalar o resto
+          uv pip install -r requirements-azure.txt --system --no-deps torch
+          
+          echo "✅ Dependências instaladas:"
+          pip list | grep -E "(fastapi|uvicorn|torch|pandas|scikit)"
+
+      - name: Validar importação do modelo
+        run: |
+          cd src
+          python -c "
+          import pickle
+          import sys
+          sys.path.append('..')
+          
+          print('🧪 Testando carga do modelo...')
+          try:
+              with open('../models/neural_network_pipeline.pkl', 'rb') as f:
+                  model = pickle.load(f)
+              print('✅ Modelo carregado com sucesso!')
+              
+              # Testar se tem métodos necessários
+              if hasattr(model, 'predict_proba'):
+                  print('✅ Método predict_proba disponível')
+              else:
+                  print('❌ Modelo não tem predict_proba')
+                  exit(1)
+                  
+          except Exception as e:
+              print(f'❌ Erro ao carregar modelo: {e}')
+              exit(1)
+          "
+
+      - name: Criar pacote de deploy otimizado
         run: |
           # Criar estrutura mínima para deploy
           mkdir -p deploy_package
           mkdir -p deploy_package/src
           mkdir -p deploy_package/models
           
-          # Copiar apenas código da API (incluindo metrics.py)
+          # Copiar código essencial da API
           cp -r src/api deploy_package/src/
           cp -r src/routers deploy_package/src/
           cp -r src/schemas deploy_package/src/
           cp -r src/services deploy_package/src/
           cp -r src/core deploy_package/src/
-          cp -r src/middleware.py deploy_package/src/
-          cp -r src/metrics.py deploy_package/src/
+          cp src/middleware.py deploy_package/src/
+          cp src/metrics.py deploy_package/src/
           cp src/main.py deploy_package/src/
           cp src/__init__.py deploy_package/src/
           
           # Copiar APENAS o modelo Neural Network (melhor modelo)
           cp models/neural_network_pipeline.pkl deploy_package/models/
           
-          # Copiar requirements
-          cp requirements-api.txt deploy_package/requirements.txt
+          # Copiar requirements otimizado
+          cp requirements-azure.txt deploy_package/requirements.txt
+          
+          # Criar startup script para Azure
+          cat > deploy_package/startup.sh << 'EOF'
+          #!/bin/bash
+          
+          # Configurar Python path
+          export PYTHONPATH=/home/site/wwwroot/src:$PYTHONPATH
+          
+          # Executar a API
+          echo "🚀 Iniciando FastAPI com modelo neural_network..."
+          echo "📊 Endpoint de métricas: /api/v1/metrics/"
+          echo "📝 Documentação: /docs"
+          
+          # Usar gunicorn para produção (recomendado pelo Azure)
+          cd /home/site/wwwroot
+          gunicorn src.main:app \
+            --workers 4 \
+            --worker-class uvicorn.workers.UvicornWorker \
+            --bind 0.0.0.0:8000 \
+            --timeout 300 \
+            --access-logfile - \
+            --error-logfile -
+          EOF
+          
+          chmod +x deploy_package/startup.sh
           
           # Criar .webignore para o Azure
           cat > deploy_package/.webignore << 'EOF'
@@ -76,78 +207,157 @@ jobs:
           **/docs/**
           **/*.ipynb
           **/mlflow_tracking/**
+          
+          # Modelos alternativos (usamos apenas neural_network)
           models/gradient_boosting_pipeline.pkl
           models/knn_pipeline.pkl
           models/logistic_regression_pipeline.pkl
-          # neural_network_pipeline.pkl é o modelo principal - manter
           models/random_forest_pipeline.pkl
           models/svm_pipeline.pkl
           models/xgboost_pipeline.pkl
           models/lightgbm_pipeline.pkl
+          
+          # Arquivos de desenvolvimento
+          requirements.txt
+          requirements-api.txt
+          scripts/
+          utils/
+          
+          # Cache e temporários
+          .venv/
+          venv/
+          env/
+          .env
+          *.env
+          EOF
+          
+          # Criar arquivo de configuração do Azure
+          cat > deploy_package/app.py << 'EOF'
+          # Arquivo de entrada para Azure App Service
+          # O Azure procura por app.py ou application.py por padrão
+          
+          import sys
+          import os
+          
+          # Adicionar src ao path
+          sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+          
+          from src.main import app
+          
+          if __name__ == "__main__":
+              # Para execução local/debug
+              import uvicorn
+              uvicorn.run(app, host="0.0.0.0", port=8000)
           EOF
           
           cd deploy_package && zip -r ../deploy.zip . && cd ..
           
-          echo "=== Pacote de deploy ==="
+          echo "=== 📦 Pacote de deploy criado ==="
           echo "Tamanho: $(du -sh deploy.zip | cut -f1)"
-          unzip -l deploy.zip
-          echo "========================"
+          echo "Conteúdo:"
+          unzip -l deploy.zip | head -30
+          echo "=================================="
 
       - name: Login no Azure
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Configurar Runtime Python
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      - name: Configurar App Service
         run: |
-          echo "Configurando runtime Python 3.12..."
+          echo "⚙️ Configurando Azure App Service..."
+          
+          # Configurar runtime Python
           az webapp config set \
-            --name churn-prediction-api \
-            --resource-group rg-churn-api \
-            --linux-fx-version "PYTHON|3.12" \
+            --name ${{ env.AZURE_WEBAPP_NAME }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --linux-fx-version "PYTHON|${{ env.PYTHON_VERSION }}" \
             --remote-debugging-enabled false
-
-      - name: Configurar Startup Command
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: |
-          echo "Configurando startup command..."
+          
+          # Configurar startup command
           az webapp config set \
-            --name churn-prediction-api \
-            --resource-group rg-churn-api \
-            --generic-configurations '{"commandLine": "uvicorn src.main:app --host 0.0.0.0 --port 8000"}'
+            --name ${{ env.AZURE_WEBAPP_NAME }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --startup-file "gunicorn src.main:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000 --timeout 300"
+          
+          echo "✅ App Service configurado"
 
       - name: Deploy para Azure App Service
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: azure/webapps-deploy@v3
         with:
-          app-name: "churn-prediction-api"
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
           package: deploy.zip
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
 
-      - name: Configurar App Settings (Monitoring)
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      - name: Configurar Application Insights e Monitoramento
         run: |
-          echo "Configurando Application Insights..."
+          echo "📊 Configurando monitoramento..."
+          
+          # Configurar Application Insights se disponível
+          if [ -n "${{ secrets.APPLICATIONINSIGHTS_CONNECTION_STRING }}" ]; then
+            az webapp config appsettings set \
+              --name ${{ env.AZURE_WEBAPP_NAME }} \
+              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+              --settings \
+              APPINSIGHTS_ENABLED=true \
+              APPLICATIONINSIGHTS_CONNECTION_STRING="${{ secrets.APPLICATIONINSIGHTS_CONNECTION_STRING }}" \
+              ApplicationInsightsAgent_EXTENSION_VERSION="~4" \
+              XDT_MicrosoftApplicationInsights_Mode="default"
+            echo "✅ Application Insights configurado"
+          else
+            echo "⚠️ APPLICATIONINSIGHTS_CONNECTION_STRING não definida, pulando..."
+          fi
+          
+          # Configurar Prometheus metrics scraping
           az webapp config appsettings set \
-            --name churn-prediction-api \
-            --resource-group rg-churn-api \
+            --name ${{ env.AZURE_WEBAPP_NAME }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
             --settings \
-            APPINSIGHTS_ENABLED=true \
-            APPLICATIONINSIGHTS_CONNECTION_STRING="${{ secrets.APPLICATIONINSIGHTS_CONNECTION_STRING }}" \
             WEBSITE_PROMETHEUS_SCRAPE_ENDPOINT="/api/v1/metrics/" \
             WEBSITE_PROMETHEUS_PORT=8001 \
-            SCM_DO_BUILD_DURING_DEPLOYMENT=true
-        continue-on-error: true
+            SCM_DO_BUILD_DURING_DEPLOYMENT=true \
+            PYTHONPATH="/home/site/wwwroot/src" \
+            LOG_LEVEL="INFO"
+          
+          echo "✅ Configurações de monitoramento aplicadas"
 
-      - name: Executar limpeza de cache via Azure CLI
-        if: always() && github.ref == 'refs/heads/main' && github.event_name == 'push'
+      - name: Verificar deploy
         run: |
-          echo "Executando limpeza de cache no Azure App Service..."
-          az webapp restart --name churn-prediction-api --resource-group rg-churn-api
-          echo "App Service reiniciado com sucesso"
-        continue-on-error: true
+          echo "🔍 Verificando deploy..."
+          
+          # Aguardar app iniciar
+          sleep 30
+          
+          # Tentar acessar health endpoint
+          APP_URL="https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net"
+          
+          echo "Testando: $APP_URL/api/v1/health"
+          
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -m 30 "$APP_URL/api/v1/health" || echo "000")
+          
+          if [ "$HTTP_STATUS" = "200" ]; then
+            echo "✅ API respondendo corretamente (HTTP $HTTP_STATUS)"
+            
+            # Testar endpoint de métricas
+            METRICS_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -m 30 "$APP_URL/api/v1/metrics/" || echo "000")
+            if [ "$METRICS_STATUS" = "200" ]; then
+              echo "✅ Métricas Prometheus disponíveis"
+            else
+              echo "⚠️ Métricas retornaram HTTP $METRICS_STATUS"
+            fi
+            
+          else
+            echo "❌ API não respondeu corretamente (HTTP $HTTP_STATUS)"
+            echo "Verifique os logs: az webapp log tail --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }}"
+            exit 1
+          fi
+
+      - name: Limpar recursos temporários
+        if: always()
+        run: |
+          rm -rf deploy_package deploy.zip || true
+          echo "🧹 Recursos temporários limpos"
 
       - name: Logout do Azure
-        if: always() && github.ref == 'refs/heads/main' && github.event_name == 'push'
+        if: always()
         run: az logout

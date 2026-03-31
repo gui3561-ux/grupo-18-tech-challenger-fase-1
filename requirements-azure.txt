@@ -1,0 +1,32 @@
+# Template para requirements otimizado para Azure App Service
+# Este arquivo é gerado automaticamente durante o deploy
+# Não edite manualmente - edite o workflow deploy.yml
+
+# API Core - FastAPI e servidor
+fastapi==0.115.0
+uvicorn[standard]==0.34.0
+gunicorn==21.2.0
+pydantic==2.9.2
+pydantic-settings==2.7.0
+
+# Machine Learning - PyTorch CPU only (otimizado para Azure)
+torch==2.5.0+cpu
+--index-url https://download.pytorch.org/whl/cpu
+
+# Data Processing
+pandas==2.2.3
+numpy==1.26.4
+scikit-learn==1.6.1
+joblib==1.4.2
+
+# Monitoring e Observability
+prometheus-client==0.21.0
+structlog==25.5.0
+
+# Azure Application Insights (opcional)
+# opentelemetry-sdk==1.27.0
+# opentelemetry-instrumentation-fastapi==0.49b0
+# opentelemetry-exporter-azuremonitor==1.0.0b18
+
+# IMPORTANTE: Para adicionar novas dependências, atualize o workflow deploy.yml
+# na seção "Preparar ambiente de produção"
