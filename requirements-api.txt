@@ -1,25 +1,16 @@
-# API Core - FastAPI e servidor
-fastapi==0.115.0
-uvicorn[standard]==0.34.0
-pydantic==2.9.2
-pydantic-settings==2.7.0
+# API
+fastapi>=0.115
+uvicorn[standard]>=0.29
+pydantic>=2.7
+pydantic-settings>=2.0
 
-# Machine Learning - PyTorch CPU only (otimizado para Azure)
-torch==2.5.0+cpu
---index-url https://download.pytorch.org/whl/cpu
+# Inference runtime (Neural Network)
+pandas>=2.2
+numpy>=1.26
+scikit-learn>=1.5
+torch>=2.3
+imbalanced-learn>=0.12
 
-# Data Processing
-pandas==2.2.3
-numpy==1.26.4
-scikit-learn==1.6.1
-joblib==1.4.2
-
-# Feature Engineering (apenas joblib para carga do modelo)
-# imbalanced-learn não é necessário em produção, apenas no treinamento
-
-# Monitoring e Observability
-prometheus-client==0.21.0
-structlog==25.5.0
-
-# Nota: Para produção no Azure, use requirements-azure.txt que é gerado
-# automaticamente durante o deploy com otimizações específicas
+# Monitoring
+prometheus-client>=0.19
+structlog>=24.1
