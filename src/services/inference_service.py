@@ -1,14 +1,20 @@
 from abc import ABC, abstractmethod
 import pickle
 import pathlib
+import time
 import pandas as pd
 import structlog
 
 from src.schemas.inference import ChurnRequest, ChurnResponse
+from src.metrics import (
+    churn_predictions_total,
+    model_inference_seconds,
+    churn_probability_histogram,
+)
 from pathlib import Path
 
-# Melhor modelo: LightGBM (ROC-AUC: 0.8559, Recall: 0.8128)
-MODEL_PATH = pathlib.Path("models/lightgbm_pipeline.pkl")
+# Melhor modelo: Neural Network (ROC-AUC: 0.8464 teste, 0.8541 CV)
+MODEL_PATH = pathlib.Path("models/neural_network_pipeline.pkl")
 
 logger = structlog.get_logger(__name__)
 
@@ -41,15 +47,33 @@ class ChurnInferenceService(InferenceServiceInterface):
             ) from exc
 
     def predict(self, req: ChurnRequest) -> ChurnResponse:
+        start_time = time.time()
+
         df = self.__prepare_dataframe(req)
         df = self.__feature_engineering(df)
 
         proba = float(self._pipeline.predict_proba(df)[0, 1])
-        logger.info("Prediction done")
+        prediction = proba >= 0.5
+
+        elapsed = time.time() - start_time
+
+        model_inference_seconds.observe(elapsed)
+        churn_predictions_total.labels(
+            prediction="churn" if prediction else "nao_churn"
+        ).inc()
+        churn_probability_histogram.observe(proba)
+
+        logger.info(
+            "Prediction done",
+            probability=proba,
+            prediction=prediction,
+            latency_ms=round(elapsed * 1000, 2),
+        )
+
         return ChurnResponse(
             churn_probability=round(proba, 4),
-            churn_prediction=proba >= 0.5,
-            model="lightgbm",
+            churn_prediction=prediction,
+            model="neural_network",
         )
 
     def __prepare_dataframe(self, req: ChurnRequest) -> pd.DataFrame:

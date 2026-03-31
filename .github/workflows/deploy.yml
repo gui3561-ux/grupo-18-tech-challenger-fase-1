@@ -70,11 +70,12 @@ jobs:
           **/mlflow_tracking/**
           models/gradient_boosting_pipeline.pkl
           models/knn_pipeline.pkl
-          models/lightgbm_pipeline.pkl
           models/logistic_regression_pipeline.pkl
+          # neural_network_pipeline.pkl é o modelo principal - manter
           models/random_forest_pipeline.pkl
           models/svm_pipeline.pkl
           models/xgboost_pipeline.pkl
+          models/lightgbm_pipeline.pkl
           EOF
           
           cd deploy_package && zip -r ../deploy.zip . && cd ..
@@ -96,6 +97,20 @@ jobs:
         with:
           app-name: "churn-prediction-api"
           package: deploy.zip
+
+      - name: Configurar App Settings (Monitoring)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          echo "Configurando Application Insights..."
+          az webapp config appsettings set \
+            --name churn-prediction-api \
+            --resource-group <SEU_RESOURCE_GROUP> \
+            --settings \
+            APPINSIGHTS_ENABLED=true \
+            APPLICATIONINSIGHTS_CONNECTION_STRING="${{ secrets.APPLICATIONINSIGHTS_CONNECTION_STRING }}" \
+            WEBSITE_PROMETHEUS_SCRAPE_ENDPOINT=/api/v1/metrics/ \
+            WEBSITE_PROMETHEUS_PORT=8001
+        continue-on-error: true
 
       - name: Executar limpeza de cache via Azure CLI
         if: always() && github.ref == 'refs/heads/main' && github.event_name == 'push'
