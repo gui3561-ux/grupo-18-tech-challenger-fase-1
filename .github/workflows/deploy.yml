@@ -9,7 +9,12 @@ on:
 env:
   WEBAPP_NAME: churn-prediction-api
   RESOURCE_GROUP: rg-churn-api
-  IMAGE_NAME: churn-api
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/churn-api
+
+permissions:
+  contents: read
+  packages: write
 
 jobs:
   build-and-deploy:
@@ -19,17 +24,12 @@ jobs:
       - name: Checkout do repositório
         uses: actions/checkout@v4
 
-      - name: Login no Azure
-        uses: azure/login@v2
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      - name: Login no Azure Container Registry
+      - name: Login no GitHub Container Registry
         uses: docker/login-action@v3
         with:
-          registry: ${{ secrets.ACR_LOGIN_SERVER }}
-          username: ${{ secrets.ACR_USERNAME }}
-          password: ${{ secrets.ACR_PASSWORD }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Configurar Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -40,16 +40,23 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest
-            ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ghcr.io/${{ env.IMAGE_NAME }}:latest
+            ghcr.io/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Login no Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Deploy no Azure Web App
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ env.WEBAPP_NAME }}
-          images: ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          images: ghcr.io/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
       - name: Verificar saúde da API
         run: |
@@ -60,8 +67,7 @@ jobs:
             --max-time 30 || echo "000")
           echo "HTTP Status: $STATUS"
           if [ "$STATUS" = "200" ]; then
-            echo "✅ API disponível em: https://${{ env.WEBAPP_NAME }}.azurewebsites.net"
+            echo "API disponível em: https://${{ env.WEBAPP_NAME }}.azurewebsites.net"
           else
-            echo "⚠️ API ainda inicializando ou health check retornou $STATUS"
-            echo "Verifique: https://${{ env.WEBAPP_NAME }}.azurewebsites.net/api/v1/health"
+            echo "API ainda inicializando ou health check retornou $STATUS"
           fi
