@@ -81,37 +81,39 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_D55A4B8253464FD4BC2557A4FE60A3C6 }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_BC9FD19C16614EFE82CB085073F1DE68 }}
 
-      - name: Configurar Python Runtime
+      - name: Configurar App Service
         run: |
-          az webapp config set \
+          # Remover WEBSITE_RUN_FROM_PACKAGE que causa conflito 409
+          az webapp config appsettings delete \
             --name ${{ env.AZUREAPPSERVICE_APPNAME }} \
             --resource-group rg-churn-api \
-            --linux-fx-version "PYTHON|${{ env.PYTHON_VERSION }}"
+            --setting-names WEBSITE_RUN_FROM_PACKAGE || true
 
+          # Configurar runtime e startup
           az webapp config set \
             --name ${{ env.AZUREAPPSERVICE_APPNAME }} \
             --resource-group rg-churn-api \
+            --linux-fx-version "PYTHON|${{ env.PYTHON_VERSION }}" \
             --startup-file "gunicorn src.main:app --workers 2 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000"
 
-      - name: Deploy via Azure CLI
-        run: |
-          az webapp deployment source config-zip \
-            --resource-group rg-churn-api \
-            --name ${{ env.AZUREAPPSERVICE_APPNAME }} \
-            --src deploy.zip || \
-          az webapp up --resource-group rg-churn-api --name ${{ env.AZUREAPPSERVICE_APPNAME }} --zip --src deploy.zip
-
-      - name: Configurar Application Insights
-        if: success()
-        run: |
+          # Configurar app settings
           az webapp config appsettings set \
             --name ${{ env.AZUREAPPSERVICE_APPNAME }} \
             --resource-group rg-churn-api \
             --settings \
+            SCM_DO_BUILD_DURING_DEPLOYMENT=false \
             APPINSIGHTS_ENABLED=true \
             APPLICATIONINSIGHTS_CONNECTION_STRING="${{ secrets.APPLICATIONINSIGHTS_CONNECTION_STRING }}" \
-            WEBSITE_PROMETHEUS_SCRAPE_ENDPOINT="/api/v1/metrics/" \
-            SCM_DO_BUILD_DURING_DEPLOYMENT=true || true
+            WEBSITE_PROMETHEUS_SCRAPE_ENDPOINT="/api/v1/metrics/"
+
+      - name: Deploy via az webapp deploy
+        run: |
+          az webapp deploy \
+            --name ${{ env.AZUREAPPSERVICE_APPNAME }} \
+            --resource-group rg-churn-api \
+            --src-path deploy.zip \
+            --type zip \
+            --async false
 
       - name: Logout do Azure
         if: always()
