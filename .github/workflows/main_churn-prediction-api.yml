@@ -86,11 +86,26 @@ jobs:
             --resource-group rg-churn-api \
             --linux-fx-version "PYTHON|${{ env.PYTHON_VERSION }}"
 
+          az webapp config set \
+            --name ${{ env.AZUREAPPSERVICE_APPNAME }} \
+            --resource-group rg-churn-api \
+            --startup-file "gunicorn src.main:app --workers 2 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000"
+
+      - name: Limpar deploy anterior
+        run: |
+          az webapp stop --name ${{ env.AZUREAPPSERVICE_APPNAME }} --resource-group rg-churn-api || true
+          sleep 5
+
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ env.AZUREAPPSERVICE_APPNAME }}
           slot-name: 'Production'
+
+      - name: Reiniciar App
+        if: success()
+        run: |
+          az webapp start --name ${{ env.AZUREAPPSERVICE_APPNAME }} --resource-group rg-churn-api
 
       - name: Configurar Application Insights
         if: success()
