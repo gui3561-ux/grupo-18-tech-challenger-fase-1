@@ -8,6 +8,7 @@ pydantic-settings>=2.0
 # ML Runtime
 torch>=2.3
 scikit-learn>=1.5
+scipy>=1.13
 pandas>=2.2
 numpy>=1.26
 joblib>=1.4
