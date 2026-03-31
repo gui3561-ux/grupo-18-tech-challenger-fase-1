@@ -12,6 +12,7 @@ scipy>=1.13
 pandas>=2.2
 numpy>=1.26
 joblib>=1.4
+threadpoolctl>=3.0
 
 # Monitoring
 prometheus-client>=0.19

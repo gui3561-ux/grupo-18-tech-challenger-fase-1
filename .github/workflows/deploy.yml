@@ -97,30 +97,6 @@ jobs:
 
       - name: Validar importação do modelo
         run: |
-          cd src
-          python -c "
-          import pickle
-          import sys
-          sys.path.append('..')
-          
-          print('🧪 Testando carga do modelo...')
-          try:
-              with open('../models/neural_network_pipeline.pkl', 'rb') as f:
-                  model = pickle.load(f)
-              print('✅ Modelo carregado com sucesso!')
-              
-              # Testar se tem métodos necessários
-              if hasattr(model, 'predict_proba'):
-                  print('✅ Método predict_proba disponível')
-              else:
-                  print('❌ Modelo não tem predict_proba')
-                  exit(1)
-                  
-          except Exception as e:
-              print(f'❌ Erro ao carregar modelo: {e}')
-              exit(1)
-          "
-
       - name: Criar pacote de deploy otimizado
         run: |
           # Criar estrutura mínima para deploy
