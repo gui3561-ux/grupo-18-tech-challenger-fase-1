@@ -1,0 +1,31 @@
+// Grafana Alloy — coleta métricas da Churn Prediction API e envia ao Grafana Cloud
+
+prometheus.scrape "churn_api" {
+  targets = [{
+    "__address__"      = "churn-prediction-api.azurewebsites.net",
+    "__scheme__"       = "https",
+    "__metrics_path__" = "/api/v1/metrics/",
+  }]
+
+  scrape_interval = "15s"
+  scrape_timeout  = "10s"
+
+  forward_to = [prometheus.remote_write.grafana_cloud.receiver]
+}
+
+prometheus.remote_write "grafana_cloud" {
+  endpoint {
+    url = env("GRAFANA_CLOUD_PROM_URL")
+
+    basic_auth {
+      username = env("GRAFANA_CLOUD_PROM_USER")
+      password = env("GRAFANA_CLOUD_PROM_PASSWORD")
+    }
+  }
+
+  external_labels = {
+    env     = "production",
+    service = "churn-prediction-api",
+    cloud   = "azure",
+  }
+}
