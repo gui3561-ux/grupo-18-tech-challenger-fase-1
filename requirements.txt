@@ -5,7 +5,8 @@ gunicorn>=21.0
 pydantic>=2.7
 pydantic-settings>=2.0
 
-# ML Runtime
+# ML Runtime - PyTorch CPU only (sem CUDA, compatível com Azure App Service)
+--extra-index-url https://download.pytorch.org/whl/cpu
 torch>=2.3
 scikit-learn>=1.5
 scipy>=1.13

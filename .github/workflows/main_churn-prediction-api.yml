@@ -28,14 +28,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python version
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Instalar uv
-        run: pip install uv
-
       - name: Validar modelo neural_network
         run: |
           if [ ! -f "models/neural_network_pipeline.pkl" ]; then
@@ -43,11 +35,6 @@ jobs:
             exit 1
           fi
           echo "Modelo encontrado: $(ls -lh models/neural_network_pipeline.pkl)"
-
-      - name: Instalar dependências
-        run: |
-          pip install torch==2.5.0+cpu --index-url https://download.pytorch.org/whl/cpu
-          uv pip install -r requirements.txt --system --no-deps torch
 
       - name: Criar pacote de deploy
         run: |
@@ -57,9 +44,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: python-app
-          path: |
-            deploy.zip
-            !antenv/
+          path: deploy.zip
 
   deploy:
     runs-on: ubuntu-latest
@@ -89,31 +74,28 @@ jobs:
             --resource-group rg-churn-api \
             --setting-names WEBSITE_RUN_FROM_PACKAGE || true
 
-          # Configurar runtime e startup
-          az webapp config set \
-            --name ${{ env.AZUREAPPSERVICE_APPNAME }} \
-            --resource-group rg-churn-api \
-            --linux-fx-version "PYTHON|${{ env.PYTHON_VERSION }}" \
-            --startup-file "gunicorn src.main:app --workers 2 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000"
-
-          # Configurar app settings
+          # Oryx vai instalar as dependências durante deploy
           az webapp config appsettings set \
             --name ${{ env.AZUREAPPSERVICE_APPNAME }} \
             --resource-group rg-churn-api \
             --settings \
-            SCM_DO_BUILD_DURING_DEPLOYMENT=false \
+            SCM_DO_BUILD_DURING_DEPLOYMENT=true \
             APPINSIGHTS_ENABLED=true \
             APPLICATIONINSIGHTS_CONNECTION_STRING="${{ secrets.APPLICATIONINSIGHTS_CONNECTION_STRING }}" \
             WEBSITE_PROMETHEUS_SCRAPE_ENDPOINT="/api/v1/metrics/"
 
-      - name: Deploy via az webapp deploy
-        run: |
-          az webapp deploy \
+          # Startup command
+          az webapp config set \
             --name ${{ env.AZUREAPPSERVICE_APPNAME }} \
             --resource-group rg-churn-api \
-            --src-path deploy.zip \
-            --type zip \
-            --async false
+            --startup-file "gunicorn src.main:app --workers 2 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000"
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZUREAPPSERVICE_APPNAME }}
+          slot-name: 'Production'
+          package: deploy.zip
 
       - name: Logout do Azure
         if: always()
