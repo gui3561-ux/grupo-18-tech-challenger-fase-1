@@ -16,6 +16,7 @@ env:
   AZURE_RESOURCE_GROUP: rg-churn-api
   PYTHON_VERSION: '3.12'
   UV_VERSION: '0.4.12'
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 jobs:
   test:
@@ -75,37 +76,13 @@ jobs:
           fi
           echo "✅ Modelo encontrado: $(ls -lh models/neural_network_pipeline.pkl)"
 
-      - name: Preparar ambiente de produção
+      - name: Instalar dependências
         run: |
-          # Criar requirements otimizado para Azure
-          cat > requirements.txt << 'EOF'
-          # API Core - FastAPI e servidor
-          fastapi==0.115.0
-          uvicorn[standard]==0.34.0
-          pydantic==2.9.2
-          pydantic-settings==2.7.0
-          
-          # Machine Learning - PyTorch CPU only (otimizado para Azure)
-          torch==2.5.0+cpu
-          --index-url https://download.pytorch.org/whl/cpu
-          
-          # Data Processing
-          pandas==2.2.3
-          numpy==1.26.4
-          scikit-learn==1.6.1
-          joblib==1.4.2
-          
-          # Feature Engineering (apenas para inferência, não precisa do pacote completo)
-          # imbalanced-learn não é necessário em produção, apenas no treinamento
-          
-          # Monitoring e Observability
-          prometheus-client==0.21.0
-          structlog==25.5.0
-          
-          # Azure Application Insights (opcional, mas recomendado)
-          # opentelemetry-sdk==1.27.0
-          # opentelemetry-instrumentation-fastapi==0.49b0
-          EOF
+          pip install torch==2.5.0+cpu --index-url https://download.pytorch.org/whl/cpu
+          uv pip install -r requirements.txt --system --no-deps torch
+
+          echo "✅ Dependências instaladas:"
+          pip list | grep -E "(fastapi|uvicorn|torch|pandas|scikit)"
 
       - name: Instalar dependências de produção
         run: |
