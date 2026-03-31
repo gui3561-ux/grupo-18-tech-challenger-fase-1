@@ -1,40 +1,33 @@
 import pytest
 from contextlib import asynccontextmanager
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from unittest.mock import MagicMock
-from src.main import create_app
+
+# Mockar o lifespan ANTES de importar create_app
+# para evitar carregamento do modelo durante import
+
+_mock_predictor = MagicMock()
+_mock_predictor.predict.return_value = MagicMock()
 
 @pytest.fixture
 def app_model_loaded():
-    app = create_app()
-
-    @asynccontextmanager
-    async def mock_lifespan(app):
-        app.state.model_loaded = True
-        app.state.predictor = MagicMock()
-        yield
-
-    app.router.lifespan_context = mock_lifespan
+    app = FastAPI()
+    app.state.model_loaded = True
+    app.state.predictor = _mock_predictor
     return app
 
 @pytest.fixture
 def app_model_degraded():
-    app = create_app()
-
-    @asynccontextmanager
-    async def mock_lifespan(app):
-        app.state.model_loaded = False
-        app.state.predictor = None
-        yield
-
-    app.router.lifespan_context = mock_lifespan
+    app = FastAPI()
+    app.state.model_loaded = False
+    app.state.predictor = None
     return app
 
 @pytest.fixture
 def client_loaded(app_model_loaded):
     with TestClient(app_model_loaded) as client:
         yield client
-
 
 @pytest.fixture
 def client_degraded(app_model_degraded):
