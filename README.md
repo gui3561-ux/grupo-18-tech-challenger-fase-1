@@ -2,6 +2,8 @@
 
 API de predição de churn usando **FastAPI** + **Neural Network (PyTorch)**.
 
+Para a **arquitetura de deploy** (Azure, GitHub Actions, contentor, observabilidade) e as **razões das escolhas técnicas**, ver [docs/arquitetura-deploy.md](docs/arquitetura-deploy.md).
+
 ## Deploy no Azure via GitHub Actions
 
 ### 1. Configurar 3 Secrets no GitHub
