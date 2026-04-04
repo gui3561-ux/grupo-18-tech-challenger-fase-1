@@ -44,5 +44,7 @@ desktop.ini
 logs/
 
 
-data/
+data/raw/
+data/processed/
+
 models/
