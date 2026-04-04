@@ -66,11 +66,32 @@ O workflow `.github/workflows/deploy.yml` executa automaticamente.
 - **Framework**: PyTorch MLP (128→64→32→1)
 - **Features**: 35 (selecionadas via SelectKBest)
 
+## Pré-requisitos 
+
+[UV](https://docs.astral.sh/uv/)
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+## Instalação
+
+```bash
+uv venv
+source .venv/bin/activate
+uv sync
+```
+
 ## Setup Local
 
 ```bash
-uv venv && source .venv/bin/activate && uv pip install -r requirements.txt
-uvicorn src.main:app --reload
+uv run uvicorn src.main:app --reload
+```
+
+## Testes
+
+```bash
+uv run pytest
 ```
 
 ## Licença
