@@ -42,3 +42,9 @@ desktop.ini
 # Logs
 *.log
 logs/
+
+
+data/raw/
+data/processed/
+
+models/

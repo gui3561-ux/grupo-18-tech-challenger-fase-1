@@ -10,6 +10,7 @@ description = "Predict API - Tech Challenger - Fase 1"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
+    "dvc>=3.67.1",
     "fastapi>=0.115",
     "gunicorn>=22.0",
     "httpx>=0.28.1",
