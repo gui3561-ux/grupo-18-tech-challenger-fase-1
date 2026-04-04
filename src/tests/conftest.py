@@ -1,21 +1,27 @@
 import pytest
-from fastapi import FastAPI
+from contextlib import asynccontextmanager
 from fastapi.testclient import TestClient
 from unittest.mock import MagicMock, patch
-import numpy as np
 
-from src.api.v1.router import api_router
 from src.schemas.inference import ChurnResponse
 
 
-def _create_test_app(model_loaded: bool) -> FastAPI:
-    app = FastAPI()
-    app.state.model_loaded = model_loaded
-    app.include_router(api_router)
-    return app
+@asynccontextmanager
+async def _noop_lifespan(app):
+    yield
 
 
-def _sample_churn_payload() -> dict:
+def _create_test_app(model_loaded: bool):
+    with patch("src.main.lifespan", _noop_lifespan):
+        from src.main import create_app
+
+        app = create_app()
+        app.state.model_loaded = model_loaded
+        return app
+
+
+@pytest.fixture
+def sample_payload() -> dict:
     return {
         "tenure_months": 2,
         "monthly_charges": 70.70,
@@ -38,11 +44,6 @@ def _sample_churn_payload() -> dict:
         "paperless_billing": "Yes",
         "payment_method": "Electronic check",
     }
-
-
-@pytest.fixture
-def sample_payload() -> dict:
-    return _sample_churn_payload()
 
 
 @pytest.fixture
@@ -82,9 +83,7 @@ def mock_inference_service():
 @pytest.fixture
 def client_with_mock_model(mock_inference_service):
     """Client com modelo mockado para testes de inferência."""
-    with patch(
-        "src.routers.inference._service", mock_inference_service
-    ):
+    with patch("src.routers.inference._service", mock_inference_service):
         app = _create_test_app(model_loaded=True)
         with TestClient(app) as client:
             yield client
