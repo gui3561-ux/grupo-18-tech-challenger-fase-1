@@ -1,14 +1,21 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+
 [project]
 name = "grupo-18-tech-challenger-fase-1"
 version = "0.1.0"
-description = "Add your description here"
+description = "Predict API - Tech Challenger - Fase 1"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "fastapi>=0.115",
+    "gunicorn>=22.0",
     "httpx>=0.28.1",
     "imbalanced-learn>=0.12",
     "ipykernel>=6.29",
+    "joblib>=1.4.0",
     "jupyter>=1.1",
     "lightgbm>=4.5",
     "matplotlib>=3.9",
@@ -31,3 +38,74 @@ dependencies = [
     "xgboost>=2.1",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.4.0",
+    "mypy>=1.10.0",
+]
+
+
+# ---------------------------------------------------------------------------
+# Setuptools
+# ---------------------------------------------------------------------------
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+
+
+# ---------------------------------------------------------------------------
+# Ruff
+# ---------------------------------------------------------------------------
+[tool.ruff]
+target-version = "py311"
+line-length = 88
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+    "C4",  # flake8-comprehensions
+    "N",   # pep8-naming
+]
+ignore = [
+    "E501",  # line too long
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["src"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = true
+
+
+# ---------------------------------------------------------------------------
+# Mypy
+# ---------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.11"
+strict = true
+ignore_missing_imports = true
+plugins = ["pydantic.mypy"]
+
+
+# ---------------------------------------------------------------------------
+# Pytest
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["src/tests"]
+addopts = [
+    "-v",
+    "--tb=short",
+    "--strict-markers",
+]
+markers = [
+    "unit: testes unitários isolados",
+    "integration: testes que sobem a aplicação completa",
+]
