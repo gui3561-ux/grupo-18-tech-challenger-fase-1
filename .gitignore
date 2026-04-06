@@ -48,3 +48,6 @@ data/raw/
 data/processed/
 
 models/
+
+# Qwen Code context
+QWEN.md

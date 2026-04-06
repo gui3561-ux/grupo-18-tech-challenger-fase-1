@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/guilhermecouceiro/prj/faip/grupo-18-tech-challenger-fase-1/monitoring/**)"
+    ]
+  }
+}
