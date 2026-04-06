@@ -15,7 +15,7 @@ API de predição de churn de clientes de telecomunicações usando **FastAPI** 
 | **Swagger UI (docs interativas)** | https://churn-prediction-api.azurewebsites.net/docs |
 | **ReDoc** | https://churn-prediction-api.azurewebsites.net/redoc |
 | **Métricas Prometheus** | https://churn-prediction-api.azurewebsites.net/api/v1/metrics/ |
-| **Grafana Dashboards** | *Consultar o grupo para acesso ao Grafana Cloud* |
+| **Grafana Dashboards** | https://gui3561.grafana.net/public-dashboards/94cb3fd572b74d69ad10a513388d8d86 |
 | **GitHub Actions** | https://github.com/gui3561-ux/grupo-18-tech-challenger-fase-1/actions |
 
 ---
