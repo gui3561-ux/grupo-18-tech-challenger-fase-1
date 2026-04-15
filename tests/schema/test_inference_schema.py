@@ -1,6 +1,5 @@
-import pandera as pa
 import pandas as pd
-from pandera import Column, DataFrameSchema, Check
+from pandera.pandas import Column, DataFrameSchema, Check
 
 INFERENCE_URL = "/api/v1/inference/predict"
 
