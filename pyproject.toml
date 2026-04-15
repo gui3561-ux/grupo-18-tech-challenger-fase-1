@@ -100,7 +100,8 @@ plugins = ["pydantic.mypy"]
 # ---------------------------------------------------------------------------
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-testpaths = ["src/tests"]
+testpaths = ["tests"]
+pythonpath = ["."]
 addopts = [
     "-v",
     "--tb=short",
@@ -109,4 +110,6 @@ addopts = [
 markers = [
     "unit: testes unitários isolados",
     "integration: testes que sobem a aplicação completa",
+    "smoke: testes de smoke para verificar se a app responde",
+    "schema: testes de validação de schema",
 ]

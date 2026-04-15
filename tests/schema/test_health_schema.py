@@ -1,7 +1,5 @@
-import pandera as pa
 import pandas as pd
-from pandera import Column, DataFrameSchema, Check
-from fastapi.testclient import TestClient
+from pandera.pandas import Column, DataFrameSchema, Check
 
 
 HEALTH_URL = "/api/v1/health"
