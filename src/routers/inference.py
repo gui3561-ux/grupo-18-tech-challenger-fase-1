@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+
 from src.schemas.inference import ChurnRequest, ChurnResponse
 from src.services.inference_service import ChurnInferenceService
 

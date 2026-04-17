@@ -1,6 +1,6 @@
-import pytest
-from unittest.mock import MagicMock, patch
-from src.schemas.inference import ChurnRequest, ChurnResponse
+from unittest.mock import MagicMock
+
+from src.schemas.inference import ChurnResponse
 
 
 def _build_mock_service(churn_probability: float, churn_prediction: bool) -> MagicMock:
@@ -93,9 +93,7 @@ class TestInferenceUnit:
         assert 0.0 <= result.churn_probability <= 1.0
 
     def test_service_predict_called_multiple_times(self):
-        mock_service = _build_mock_service(
-            churn_probability=0.5, churn_prediction=True
-        )
+        mock_service = _build_mock_service(churn_probability=0.5, churn_prediction=True)
         payload = _build_churn_request()
 
         mock_service.predict(payload)

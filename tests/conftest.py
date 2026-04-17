@@ -1,7 +1,8 @@
-import pytest
 from contextlib import asynccontextmanager
-from fastapi.testclient import TestClient
 from unittest.mock import MagicMock, patch
+
+import pytest
+from fastapi.testclient import TestClient
 
 from src.schemas.inference import ChurnResponse
 

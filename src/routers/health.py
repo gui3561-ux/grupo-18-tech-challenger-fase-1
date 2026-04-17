@@ -1,10 +1,9 @@
 from fastapi import APIRouter, Request
 
-from src.schemas.health import HealthResponse
 from src.core.config import settings
+from src.schemas.health import HealthResponse
 
 router = APIRouter(tags=["Health"])
-
 
 
 @router.get(

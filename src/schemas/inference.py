@@ -1,5 +1,6 @@
-from pydantic import BaseModel
 from typing import Literal
+
+from pydantic import BaseModel
 
 
 class ChurnRequest(BaseModel):
@@ -28,8 +29,10 @@ class ChurnRequest(BaseModel):
     contract: Literal["Month-to-month", "One year", "Two year"]
     paperless_billing: Literal["Yes", "No"]
     payment_method: Literal[
-        "Electronic check", "Mailed check",
-        "Bank transfer (automatic)", "Credit card (automatic)"
+        "Electronic check",
+        "Mailed check",
+        "Bank transfer (automatic)",
+        "Credit card (automatic)",
     ]
 
     model_config = {
@@ -54,7 +57,7 @@ class ChurnRequest(BaseModel):
                 "streaming_movies": "No",
                 "contract": "Month-to-month",
                 "paperless_billing": "Yes",
-                "payment_method": "Electronic check"
+                "payment_method": "Electronic check",
             }
         }
     }

@@ -1,6 +1,3 @@
-import pytest
-
-
 class TestMetricsEndpoint:
     """Testes para os endpoints de métricas Prometheus."""
 

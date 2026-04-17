@@ -1,17 +1,18 @@
-from abc import ABC, abstractmethod
-import pickle
 import pathlib
+import pickle
 import time
+from abc import ABC, abstractmethod
+from pathlib import Path
+
 import pandas as pd
 import structlog
 
-from src.schemas.inference import ChurnRequest, ChurnResponse
 from src.metrics import (
     churn_predictions_total,
-    model_inference_seconds,
     churn_probability_histogram,
+    model_inference_seconds,
 )
-from pathlib import Path
+from src.schemas.inference import ChurnRequest, ChurnResponse
 
 # Melhor modelo: Neural Network (ROC-AUC: 0.8464 teste, 0.8541 CV)
 MODEL_PATH = pathlib.Path("models/neural_network_pipeline.pkl")
@@ -22,10 +23,10 @@ logger = structlog.get_logger(__name__)
 class ModelNotLoadedError(Exception):
     """Levantada quando o pipeline de ML não está disponível"""
 
-class InferenceServiceInterface(ABC):
 
+class InferenceServiceInterface(ABC):
     @abstractmethod
-    def predict(self) -> ChurnResponse:
+    def predict(self, req: ChurnRequest) -> ChurnResponse:
         pass
 
 
@@ -79,44 +80,50 @@ class ChurnInferenceService(InferenceServiceInterface):
     def __prepare_dataframe(self, req: ChurnRequest) -> pd.DataFrame:
         logger.info("Preparing DataFrame")
         data = {
-            "Tenure Months":     req.tenure_months,
-            "Monthly Charges":   req.monthly_charges,
-            "Total Charges":     req.total_charges,
-            "State":             req.state,
-            "Gender":            req.gender,
-            "Senior Citizen":    req.senior_citizen,
-            "Partner":           req.partner,
-            "Dependents":        req.dependents,
-            "Phone Service":     req.phone_service,
-            "Multiple Lines":    req.multiple_lines,
-            "Internet Service":  req.internet_service,
-            "Online Security":   req.online_security,
-            "Online Backup":     req.online_backup,
+            "Tenure Months": req.tenure_months,
+            "Monthly Charges": req.monthly_charges,
+            "Total Charges": req.total_charges,
+            "State": req.state,
+            "Gender": req.gender,
+            "Senior Citizen": req.senior_citizen,
+            "Partner": req.partner,
+            "Dependents": req.dependents,
+            "Phone Service": req.phone_service,
+            "Multiple Lines": req.multiple_lines,
+            "Internet Service": req.internet_service,
+            "Online Security": req.online_security,
+            "Online Backup": req.online_backup,
             "Device Protection": req.device_protection,
-            "Tech Support":      req.tech_support,
-            "Streaming TV":      req.streaming_tv,
-            "Streaming Movies":  req.streaming_movies,
-            "Contract":          req.contract,
+            "Tech Support": req.tech_support,
+            "Streaming TV": req.streaming_tv,
+            "Streaming Movies": req.streaming_movies,
+            "Contract": req.contract,
             "Paperless Billing": req.paperless_billing,
-            "Payment Method":    req.payment_method,
+            "Payment Method": req.payment_method,
         }
         return pd.DataFrame([data])
 
     def __feature_engineering(self, df: pd.DataFrame) -> pd.DataFrame:
         logger.info("Started feature engineering")
         df["high_risk_profile"] = (
-            (df["Internet Service"] == "Fiber optic") &
-            (df["Contract"] == "Month-to-month")
+            (df["Internet Service"] == "Fiber optic")
+            & (df["Contract"] == "Month-to-month")
         ).astype(int)
 
         df["isolated_senior"] = (
-            (df["Senior Citizen"] == "Yes") &
-            (df["Partner"] == "No") &
-            (df["Dependents"] == "No")
+            (df["Senior Citizen"] == "Yes")
+            & (df["Partner"] == "No")
+            & (df["Dependents"] == "No")
         ).astype(int)
 
-        servicos = ["Online Security", "Online Backup", "Device Protection",
-                    "Tech Support", "Streaming TV", "Streaming Movies"]
+        servicos = [
+            "Online Security",
+            "Online Backup",
+            "Device Protection",
+            "Tech Support",
+            "Streaming TV",
+            "Streaming Movies",
+        ]
         df["internet_services_count"] = sum(
             (df[c] == "Yes").astype(int) for c in servicos
         )
