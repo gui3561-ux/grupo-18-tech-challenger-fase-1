@@ -30,8 +30,9 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      # Tag major "v8" não existe no repo; usar release semver (ver tags em github.com/astral-sh/setup-uv).
       - name: Instalar uv
-        uses: astral-sh/setup-uv@v8
+        uses: astral-sh/setup-uv@v8.1.0
 
       - name: Instalar dependências (runtime + dev)
         run: uv sync --extra dev
