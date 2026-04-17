@@ -15,8 +15,6 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # Ações JS (checkout, setup-uv, etc.) passam a usar Node 24 — evita aviso de depreciação do Node 20.
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   WEBAPP_NAME: churn-prediction-api
   IMAGE_NAME: ${{ github.repository }}/churn-api
 
@@ -30,10 +28,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Instalar uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v8
 
       - name: Instalar dependências (runtime + dev)
         run: uv sync --extra dev
@@ -57,20 +55,20 @@ jobs:
 
     steps:
       - name: Checkout do repositório
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Login no GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Configurar Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Build e push da imagem Docker
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: true
@@ -83,26 +81,30 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Login no Azure
-        uses: azure/login@v2
+        uses: azure/login@v3
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Deploy no Azure Web App
-        uses: azure/webapps-deploy@v3
+        uses: azure/webapps-deploy@v3.0.8
         with:
           app-name: ${{ env.WEBAPP_NAME }}
           images: ghcr.io/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
       - name: Verificar saúde da API
+        env:
+          HEALTH_URL: https://${{ env.WEBAPP_NAME }}.azurewebsites.net/api/v1/health
         run: |
-          echo "Aguardando inicialização do container (90s)..."
-          sleep 90
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-            https://${{ env.WEBAPP_NAME }}.azurewebsites.net/api/v1/health \
-            --max-time 30 || echo "000")
-          echo "HTTP Status: $STATUS"
-          if [ "$STATUS" = "200" ]; then
-            echo "API disponível em: https://${{ env.WEBAPP_NAME }}.azurewebsites.net"
-          else
-            echo "API ainda inicializando ou health check retornou $STATUS"
-          fi
+          set -euo pipefail
+          echo "Aguardando /api/v1/health (até ~3 min, intervalo 5s)..."
+          for i in $(seq 1 36); do
+            STATUS=$(curl -sS -o /dev/null -w "%{http_code}" "$HEALTH_URL" --max-time 20 || echo "000")
+            echo "Tentativa ${i}/36: HTTP $STATUS"
+            if [ "$STATUS" = "200" ]; then
+              echo "API disponível em: https://${{ env.WEBAPP_NAME }}.azurewebsites.net"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::Health check não retornou 200 após o tempo limite."
+          exit 1
