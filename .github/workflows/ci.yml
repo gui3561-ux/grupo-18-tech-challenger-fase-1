@@ -1,15 +1,21 @@
-name: Build e Deploy — Churn Prediction API
+# Pipeline único: testes em todas as branches / PRs;
+# build + deploy só em main, após testes passarem (push ou workflow_dispatch).
+
+name: CI
 
 on:
   push:
-    branches:
-      - main
+    branches: ["*"]
+  pull_request:
+    branches: ["*"]
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 env:
   WEBAPP_NAME: churn-prediction-api
-  RESOURCE_GROUP: rg-churn-api
-  REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}/churn-api
 
 permissions:
@@ -17,7 +23,34 @@ permissions:
   packages: write
 
 jobs:
+  test:
+    name: Testes (lint, tipos, pytest)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Instalar dependências (runtime + dev)
+        run: uv sync --extra dev
+
+      - name: Ruff (lint + format check)
+        run: |
+          uv run ruff check src tests
+          uv run ruff format --check src tests
+
+      - name: Mypy
+        run: uv run mypy src
+
+      - name: Rodar testes
+        run: uv run pytest -v
+
   build-and-deploy:
+    name: Build e deploy (Azure)
+    needs: test
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
 
     steps:

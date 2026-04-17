@@ -240,7 +240,7 @@ curl -X POST http://localhost:8000/api/v1/inference/predict \
 
 ## Deploy no Azure via GitHub Actions
 
-O workflow `.github/workflows/deploy.yml` é executado automaticamente a cada push na branch `main`.
+O workflow único `.github/workflows/ci.yml` executa **testes** em todo *push* e em *pull requests*. Em *push* (ou execução manual) na branch **`main`**, após os testes passarem, segue **build** da imagem, *push* para o GHCR e **deploy** no Azure Web App.
 
 ### Secrets necessários no GitHub
 
