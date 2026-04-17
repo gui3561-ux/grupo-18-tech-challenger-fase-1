@@ -1,119 +1,140 @@
-# Model Card: Sistema de Predição de Churn de Clientes
+# Model Card — Predição de Churn (Telecom)
 
-**Versão:** 1.0
-**Data:** Março/2026
-**Equipe:** Grupo 18 - Tech Challenge Fase 1 (FIAP)
-**Repositório:** https://github.com/fiap-tech-challenge/grupo-18
+| Campo | Valor |
+|-------|--------|
+| **Versão do documento** | 1.1 |
+| **Última atualização** | Abril/2026 |
+| **Equipe** | Grupo 18 — Tech Challenge Fase 1 (FIAP Pós Tech) |
+| **Repositório** | https://github.com/gui3561-ux/grupo-18-tech-challenger-fase-1 |
+| **API de produção (referência)** | https://churn-prediction-api.azurewebsites.net |
+| **Artefato em produção** | `models/neural_network_pipeline.pkl` |
+
+Este *Model Card* segue o espírito de transparência de [Mitchell et al., 2019](https://arxiv.org/abs/1810.03993) adaptado ao escopo acadêmico do desafio: descreve o **modelo**, os **dados**, a **performance**, **limitações**, **equidade**, **riscos** e **operacionalização** (API, monitoramento).
 
 ---
 
-## 1. Visão Geral do Modelo
+## 1. Visão geral
 
-### 1.1. Detalhes do Modelo
+### 1.1 Identificação do modelo
 
 | Atributo | Valor |
-|----------|-------|
-| **Tipo de Modelo** | Neural Network (Multi-Layer Perceptron) |
-| **Framework** | PyTorch + scikit-learn |
-| **Arquitetura** | 128 → 64 → 32 → 1 (com BatchNorm e Dropout) |
-| **Pipeline** | Completo (pré-processamento + modelo) |
-| **Formato de Serialização** | Pickle (.pkl) |
-| **Caminho do Modelo** | `models/neural_network_pipeline.pkl` |
-| **Rastreamento** | MLflow (experimento: `churn_mvp`) |
+|----------|--------|
+| **Nome interno** | Neural Network — pipeline `neural_network` |
+| **Família** | Multi-Layer Perceptron (classificação binária) |
+| **Frameworks** | **PyTorch** (módulo neural), **scikit-learn** (`Pipeline`, pré-processamento, métricas) |
+| **Arquitetura (camadas densas)** | 128 → 64 → 32 → 1 logit; **BatchNorm** e **Dropout** nas camadas ocultas |
+| **Serialização** | `pickle` (objeto `sklearn.pipeline.Pipeline`) |
+| **Caminho padrão** | `models/neural_network_pipeline.pkl` |
+| **Rastreio de experimentos** | MLflow (experimento histórico `churn_mvp` / runs sob `mlflow_tracking/`) |
+| **Versão da API exposta** | Campo `model` na resposta JSON: ex. `"neural_network"` |
 
-### 1.2. Propósito
+### 1.2 Propósito
 
-O modelo prediz a probabilidade de um cliente de telecomunicações cancelar seus serviços (churn) nos próximos meses. O sistema é destinado a:
-- Identificar clientes com alto risco de churn para ações preventivas
-- Priorizar recursos de retenção de clientes
-- Apoiar decisões de marketing e relacionamento com o cliente
+Estimar **P(churn)** — probabilidade de o cliente **cancelar** o serviço em um horizonte alinhado ao *label* do dataset original (comportamento histórico observado no *snapshot* IBM Telco). Uso pretendido:
 
-### 1.3. Público-Alvo
+- Priorização para **retenção** e campanhas de **marketing**
+- Apoio à **gestão** de risco de base (não substitui política comercial ou jurídica)
 
-- **Equipes de Retenção:** Focar esforços em clientes com maior risco
-- **Marketing:** Campanhas direcionadas e ofertas personalizadas
-- **Gestão:** Análise de riscos e planejamento estratégico
+### 1.3 Não é destinado a
 
----
-
-## 2. Dados de Treinamento
-
-### 2.1. Dataset Base
-
-| Característica | Descrição |
-|----------------|-----------|
-| **Nome** | Telco Customer Churn |
-| **Fonte** | IBM Watson / Kaggle |
-| **Tamanho** | 7.043 registros |
-| **Período** | Dados transversais (snapshot) |
-| **Localização** | `data/Telco_customer_churn.csv` |
-
-### 2.2. Features
-
-#### Features Numéricas (7)
-1. `Tenure Months` - Tempo como cliente (meses)
-2. `Monthly Charges` - Cargo mensal
-3. `Total Charges` - Cargo total acumulado
-4. `high_risk_profile` - Indicador binário (fiber + month-to-month)
-5. `isolated_senior` - Indicador binário (idoso sem parceiro/dependentes)
-6. `internet_services_count` - Contagem de serviços de internet contratados
-7. `cost_per_month` - Custo mensal por mês de tenure
-
-#### Features Categóricas (17)
-1. `State` - Estado
-2. `Gender` - Gênero
-3. `Senior Citizen` - Idoso
-4. `Partner` - Possui parceiro
-5. `Dependents` - Possui dependentes
-6. `Phone Service` - Possui telefone
-7. `Multiple Lines` - Múltiplas linhas
-8. `Internet Service` - Tipo de internet
-9. `Online Security` - Segurança online
-10. `Online Backup` - Backup online
-11. `Device Protection` - Proteção de dispositivo
-12. `Tech Support` - Suporte técnico
-13. `Streaming TV` - TV streaming
-14. `Streaming Movies` - Filmes streaming
-15. `Contract` - Tipo de contrato
-16. `Paperless Billing` - Fatura digital
-17. `Payment Method` - Método de pagamento
-
-### 2.3. Target
-
-| Nome | Tipo | Descrição |
-|------|------|-----------|
-| `Churn Value` | Binário (0/1) | 1 = cliente cancelou, 0 = cliente ativo |
-
-**Distribuição do Target:**
-- **Não Churn (0):** 5.693 (80.86%)
-- **Churn (1):** 1.350 (19.14%)
-
-### 2.4. Pré-processamento
-
-- **Remoção de leakage:** Colunas `Churn Label`, `Churn Score`, `CLTV`, `Churn Reason` removidas (vazamento de informação do target)
-- **Tratamento de nulos:** `Total Charges` → mediana (apenas 11 nulos)
-- **Encoding:** OneHotEncoder para features categóricas
-- **Seleção de features:** SelectKBest (k otimizado via hyperparameter search)
-- **Escalonamento:** StandardScaler (obrigatório para redes neurais)
+- Decisões **totalmente automatizadas** sem revisão humana (crédito, rescisão de contrato, preços individualizados sensíveis)
+- **Outras indústrias** sem novo treino e validação
+- **Conformidade regulatória** sem revisão legal (LGPD/GDPR exigem base legal, DPIA, etc.)
 
 ---
 
-## 3. Performance do Modelo
+## 2. Dados de treinamento e inferência
 
-### 3.1. Métricas Obtidas
+### 2.1 Dataset de referência (treino)
 
-| Métrica | Valor | Observação |
-|---------|-------|------------|
-| **ROC-AUC (teste)** | 0.8464 | Principal métrica de seleção |
-| **ROC-AUC (CV)** | 0.8541 | Validação cruzada (5-fold) |
-| **Accuracy** | ~0.80-0.81 | Acurácia geral (estimado) |
-| **Precision** | ~0.66-0.68 | Precisão da classe churn (estimado) |
-| **Recall** | ~0.51-0.53 | Sensibilidade da classe churn (estimado) |
-| **F1-Score** | ~0.58-0.60 | Harmônica entre precision e recall (estimado) |
+| Campo | Descrição |
+|-------|-----------|
+| **Nome comum** | Telco Customer Churn |
+| **Origem** | Conjunto público amplamente usado (IBM / Kaggle) |
+| **Tamanho típico** | **7.043** linhas |
+| **Granularidade** | Um registro por cliente (snapshot) |
+| **Target** | Binário — churn sim/não |
 
-*Nota: As métricas de test set foram extraídas do melhor modelo Neural Network do MLflow. Valores precisos de accuracy, precision, recall e F1 dependem do threshold escolhido.*
+**Arquivo no repositório (quando presente):** `data/Telco_customer_churn.csv` (ou equivalente versionado via DVC — ver política do grupo).
 
-### 3.2. Hiperparâmetros do Melhor Modelo
+### 2.2 Distribuição do target (ordem de grandeza)
+
+| Classe | Proporção aproximada |
+|--------|----------------------|
+| Não churn (0) | ~81% |
+| Churn (1) | ~19% |
+
+*Desbalanceamento tratado no treino com **SMOTE** (pipeline) e **Focal Loss** (γ = 3,0).*
+
+### 2.3 *Leakage* e higiene de dados
+
+Colunas com **vazamento de informação** em relação ao alvo foram removidas no pipeline de treino, por exemplo:
+
+- `Churn Label`, `Churn Score`, `CLTV`, `Churn Reason` (quando existirem no *raw*)
+
+Valores ausentes pontuais (ex.: `Total Charges`) foram tratados (ex.: mediana) no *notebook* / *pipeline* de treino.
+
+### 2.4 Cobertura geográfica e representatividade
+
+O dataset IBM Telco refere-se a clientes de **telecom nos EUA**, com coluna de **estado** (vários estados). **Não** restringir mentalmente o domínio a um único estado: o modelo foi treinado em **mistura de estados**; ainda assim, **não há garantia** de generalização para outros países, regulamentos ou ofertas de produto.
+
+### 2.5 Features utilizadas pelo modelo (após engenharia)
+
+#### Numéricas / derivadas (exemplos)
+
+- `Tenure Months`, `Monthly Charges`, `Total Charges`
+- `high_risk_profile` — fibra + contrato *month-to-month*
+- `isolated_senior` — idoso sem parceiro/dependentes
+- `internet_services_count` — contagem de add-ons ativos
+- `cost_per_month` — `Monthly Charges / (Tenure Months + 1)`
+
+#### Categóricas (alto nível)
+
+Estado, gênero, serviços, tipo de internet, contrato, pagamento, etc. — codificadas no *pipeline* (ex.: *One-Hot*).
+
+**Seleção de features:** `SelectKBest` com **k = 35** (hiperparâmetro do melhor run).
+
+### 2.6 Features na API (entrada HTTP)
+
+A API recebe **nomes em snake_case** (`tenure_months`, `payment_method`, …). O serviço monta um `DataFrame` com os **nomes de coluna do dataset** (`Tenure Months`, `Payment Method`, …) e aplica a mesma engenharia que no treino antes de `predict_proba`. Ver [`src/services/inference_service.py`](src/services/inference_service.py).
+
+---
+
+## 3. Metodologia de treino
+
+### 3.1 Pré-processamento (dentro do `Pipeline`)
+
+- **Escalonamento:** `StandardScaler` onde aplicável à rede
+- **Encoding:** variáveis categóricas tratadas no *pipeline* (ex.: *one-hot*)
+- **Seleção:** `SelectKBest`, **k = 35**
+- **Balanceamento:** **SMOTE** (via `imbalanced-learn`, quando habilitado no classificador)
+
+### 3.2 Arquitetura neural (detalhe)
+
+```
+Entrada (35 features após seleção)
+  → Linear(35→128) + BatchNorm + ReLU + Dropout(0,4)
+  → Linear(128→64) + BatchNorm + ReLU + Dropout(0,3)
+  → Linear(64→32) + ReLU
+  → Linear(32→1)  [logits]
+  → sigmoid na inferência (probabilidade classe positiva)
+```
+
+### 3.3 Otimização e regularização
+
+| Item | Valor / nota |
+|------|----------------|
+| **Otimizador** | AdamW |
+| **Learning rate** | 0,0001 (ver hiperparâmetros) |
+| **Weight decay** | 0,0001 |
+| **Loss** | Focal Loss (γ = 3,0) para foco na classe minoritária |
+| **Scheduler** | Cosseno com *warmup* linear (~10 épocas) |
+| **Early stopping** | Monitorando ROC-AUC em validação (*patience* 50 épocas) |
+| **Gradient clipping** | `max_norm = 1,0` |
+
+### 3.4 Hiperparâmetros registrados (referência MLflow)
+
+Valores típicos do melhor modelo (podem variar levemente entre commits de treino):
 
 ```json
 {
@@ -132,288 +153,52 @@ O modelo prediz a probabilidade de um cliente de telecomunicações cancelar seu
 }
 ```
 
-### 3.3. Arquitetura da Rede Neural
+---
 
-```
-Input (35 features after selection)
-    ↓
-Linear(35 → 128) + BatchNorm1d + ReLU + Dropout(0.4)
-    ↓
-Linear(128 → 64) + BatchNorm1d + ReLU + Dropout(0.3)
-    ↓
-Linear(64 → 32) + ReLU
-    ↓
-Linear(32 → 1)  // logits
-```
+## 4. Performance offline
 
-**Otimizador:** AdamW (lr=0.0001, weight_decay=0.0001)  
-**Loss Function:** Focal Loss (gamma=3.0)  
-**Scheduler:** Cosine annealing com warmup linear (10 epochs)  
-**Early Stopping:** Por ROC-AUC no validation split interno (patience=50)  
-**Gradient Clipping:** max_norm=1.0
+### 4.1 Métricas principais
 
-### 3.4. Matriz de Confusão (estimado)
+| Métrica | Valor | Notas |
+|---------|-------|--------|
+| **ROC-AUC (teste / holdout)** | **0,8464** | Métrica principal de *ranking* |
+| **ROC-AUC (5-fold CV)** | **0,8541** | Estabilidade entre *folds* |
+| **Accuracy** | ~0,80–0,81 | Depende do threshold 0,5 |
+| **Precision (classe churn)** | ~0,66–0,68 | Estimativa |
+| **Recall (classe churn)** | ~0,51–0,53 | Estimativa — **metade dos churns** pode escapar |
+| **F1** | ~0,58–0,60 | Estimativa |
 
-| | Predito Não Churn | Predito Churn |
-|---|-------------------|---------------|
-| **Real Não Churn** | ~900 (TN) | ~130 (FP) |
-| **Real Churn**    | ~640 (FN) | ~700 (TP) |
+Valores de precisão/recall/F1 são **ordens de grandeza**; o *threshold* de negócio pode diferir de 0,5.
 
-*Nota: Matriz calculada com threshold default de 0.5*
+### 4.2 Matriz de confusão (ilustrativa, threshold 0,5)
 
-### 3.5. Análise de Thresholds
+Ordem de grandeza no conjunto de teste (não substitui matriz oficial exportada do notebook):
 
-O sistema utiliza dois thresholds configuráveis para categorização de risco (em `config.py`):
+|  | Predito não churn | Predito churn |
+|--|-------------------|---------------|
+| **Real não churn** | TN alto | FP moderado |
+| **Real churn** | **FN alto** (recall ~0,52) | TP moderado |
 
-- **Risco Baixo:** `probability < 0.3`
-- **Risco Médio:** `0.3 <= probability < 0.6`
-- **Risco Alto:** `probability >= 0.6`
+### 4.3 Thresholds de negócio vs modelo
+
+| Uso | Threshold |
+|-----|-----------|
+| **Rótulo binário na API** (`churn_prediction`) | **≥ 0,5** sobre `churn_probability` |
+| **Faixas de risco** (apenas orientação; configurável via env) | Baixo `< 0,3`; médio `[0,3, 0,6)`; alto `≥ 0,6` |
+
+Constantes em `src/core/config.py`: `risk_threshold_low`, `risk_threshold_medium`.
 
 ---
 
-## 4. Limitações
+## 5. Serviço online (inferência)
 
-### 4.1. Limitações Técnicas
+### 5.1 Endpoint
 
-1. **Dataset Limitado**
-   - Apenas 7.043 amostras
-   - Dados de uma única operadora norte-americana (possível viés geográfico)
-   - Dataset estático (não captura evolução temporal)
+- **Método / URL:** `POST /api/v1/inference/predict`
+- **Base produção:** `https://churn-prediction-api.azurewebsites.net`
 
-2. **Classes Desbalanceadas**
-   - Apenas 19.14% de churn
-   - Recall moderado (~0.52) significa que ~48% dos churns não são detectados
-   - Pode ser inadequate para cenários onde recall é crítico
+### 5.2 Contrato de saída
 
-3. **Viés Temporal**
-   - Não há validação em dados temporais (train/test split aleatório)
-   - Pode superestimar performance em deployed environment
-
-4. **Dependências de Software**
-   - O modelo é salvo como pickle (segurança: execução de código arbitrário na desserialização)
-   - PyTorch e scikit-learn com versões específicas
-   - Necessidade de instalação de PyTorch (computacionalmente mais pesado)
-
-5. **Custo Computacional**
-   - Treinamento de Neural Network requer GPU para otimização (embora CPU funcione)
-   - Inferência mais lenta que modelos baseados em árvores
-   - Maior footprint de memória
-
-### 4.2. Limitações de Negócio
-
-1. **Escopo Geográfico Restrito**
-   - Dados originados apenas da Califórnia (EUA)
-   - Padrões de comportamento podem não se generalizar para outras regiões
-
-2. **Período dos Dados**
-   - Dados são um snapshot, sem evolução temporal
-   - Não captura sazonalidades ou tendências de longo prazo
-
-3. **Features Limitadas**
-   - Sem dados de interação do cliente (call center, reclamações, NPS)
-   - Sem dados de uso de serviço (tráfego de dados, minutos falados)
-
----
-
-## 5. Vieses e Equidade
-
-### 5.1. Análise de Viés por Grupo Sensível
-
-**Grupos Avaliados:**
-- Gênero (Masculino/Feminino)
-- Senior Citizen (Sim/Não)
-- Contrato (Month-to-month vs. Anual)
-
-**Observações (baseado em EDA):**
-
-1. **Gênero:**
-   - Distribuição balanceada (~50/50)
-   - Não há evidência forte de viés aparente na EDA
-
-2. **Idosos (Senior Citizen):**
-   - Taxa de churn ligeiramente maior em idosos
-   - Categoria `isolated_senior` (idoso sem parceiro/dependentes) pode ser mais vulnerável
-   - Recomenda-se monitorar outcomes por este grupo
-
-3. **Tipo de Contrato:**
-   - Month-to-month tem altíssima taxa de churn (30-40%+)
-   - Clientes anuais/dois anos têm taxa muito baixa
-   - Pode refletir ciclo natural de contratos, não necessariamente viés
-
-### 5.2. Riscos de Viés
-
-- **Viés de Disponibilidade:** Features como `Churn Score` e `CLTV` foram removidas para evitar leakage, mas são proxies de valor do cliente
-- **Viés de Ciclo de Vida:** Clientes com maior tenure têm menor churn (natural)
-- **Viés Geográfico:** Só dados da Califórnia - pode não representar outras culturas/regulamentações
-
-### 5.3. Recomendações
-
-1. **Monitorar disparidades:**
-   - Acompanhar precision/recall por grupos demográficos
-   - Implementar fairness metrics (disparate impact, equalized odds)
-
-2. **Considerar contexto:**
-   - Recomendações de retenção devem considerar valor do cliente (CLTV) separadamente
-   - Evitar tratamentos discriminatórios baseados em age/gender
-
----
-
-## 6. Cenários de Falha
-
-### 6.1. Casos Limítrofes
-
-1. **Novos Clientes (Tenure < 3 meses)**
-   - Pouco histórico para predição confiável
-   - Alta variabilidade no comportamento inicial
-
-2. **Clientes com Perfil Atípico**
-   - Features fora da distribuição de treino (ex: Monthly Charges extremos)
-   - Possível extrapolação do modelo
-
-3. **Mudanças de Mercado**
-   - Lançamento de novos concorrentes
-   - Mudanças regulatórias (ex: novas leis de telecom)
-   - Crises econômicas
-
-### 6.2. Condições de Dados
-
-1. **Data Drift**
-   - Mudança na distribuição de features (ex: mudança de comportamento de pagamento)
-   - Novos tipos de contrato ou serviços não vistos em treino
-
-2. **Target Drift**
-   - Mudança na definição de churn (ex: nova política de cancelamento)
-   - Mudança na taxa base de churn (seasonality macro)
-
-3. **Missing Values**
-   - Se um campo crítico (ex: Contract) chegar em produção com valor nulo
-   - Valores não vistos durante treinamento (categoria unseen)
-
-### 6.3. Falhas Esperadas
-
-1. **Falsos Negativos (Churn não detectado)**
-   - Clientes que cancelam sem sinais claros nos dados disponíveis
-   - Impacto: Oportunidades de retenção perdidas
-
-2. **Falsos Positivos (Alarme falso)**
-   - Clientes erroneamente classificados como churn
-   - Impacto: Custo de intervenções desnecessárias, customer annoyance
-
-3. **Extrapolação para Outras Operadoras**
-   - O modelo foi treinado em dados de uma operadora específica
-   - Pode performar mal em contextos com diferentes planos/preços/regulamentações
-
----
-
-## 7. Considerações Éticas
-
-### 7.1. Uso Pretendido
-
-- **Primário:** Apoiar decisões de retenção de clientes em ambientes B2C de telecomunicações
-- **Não Destinado a:**
-  - Tomada de decisões Fully automated sem revisão humana
-  - Uso em contextos regulatórios/creditícios
-  - Aplicação em outras indústrias sem re-treino
-
-### 7.2. Riscos
-
-1. **Discriminação:**
-   - Evitar uso de predictions para discriminação por idade, gênero, localização
-   - Garantir que ações de retenção sejam equitativas
-
-2. **Privacidade:**
-   - Os dados utilizados contêm informações geográficas (Cidade, Estado)
-   - Garantir conformidade com LGPD/GDPR em produção
-
-3. **Transparência:**
-   - Informar aos clientes quando estiverem em programa de retenção baseado em ML
-   - Oferecer canal de questionamento/recursos
-
-### 7.3. Mitigações
-
-- **Anonimização:** Nomes e IDs de clientes removidos no treinamento
-- **Retenção Humana no Loop:** Previsões devem ser revisadas por atendentes
-- **Monitoramento Contínuo:** Acompanhar fairness metrics e drift
-- **Explicabilidade:** Considerar técnicas SHAP/LIME para explicar predições individuais (desafio maior em redes neurais)
-
----
-
-## 8. Manutenção e Monitoramento
-
-### 8.1. Frequência de Re-treinamento
-
-- **Recomendação:** Re-treinar a cada 3-6 meses
-- **Gatilhos para re-treinamento imediato:**
-  - Data drift detectado (>10% mudança em distribuição de 3+ features)
-  - Queda de performance >5% em produção
-  - Nova campanha/mudança de preços
-  - Expansão geográfica
-
-### 8.2. Métricas de Monitoramento (Produção)
-
-| Métrica | Frequência | Threshold Alerta |
-|---------|------------|------------------|
-| **ROC-AUC** | Diária/Semanal | < 0.80 |
-| **Precision** | Diária/Semanal | < 0.60 |
-| **Recall** | Diária/Semanal | < 0.45 |
-| **Data Drift** (KS per feature) | Semanal | p < 0.01 |
-| **Latência de inferência** | Por request | > 200ms *(maior que árvores)* |
-| **Taxa de erro (5xx)** | Diária | > 1% |
-
-### 8.3. Logging e Rastreamento
-
-- **MLflow:** Logging de métricas, parâmetros e artefatos
-- **Structured Logging:** structlog em serviço de inferência
-- **API Logs:** FastAPI/Uvicorn logs
-- **TensorBoard:** (opcional) Para monitoramento de treino futuro
-
-### 8.4. Controle de Versões
-
-- **Código:** Git (commit history)
-- **Modelos:** MLflow Model Registry
-- **Dados:** Versionamento manual (snapshot em `data/`)
-- **Pipeline:** Jupyter notebooks versionados
-
----
-
-## 9. Como Usar o Modelo
-
-### 9.1. API REST
-
-**Endpoint:** `POST /inference/predict`
-
-**URL de Produção:**
-`https://churn-prediction-api.azurewebsites.net`
-
-**Local:** `http://localhost:8000`
-
-**Exemplo de Request:**
-```json
-{
-  "tenure_months": 12,
-  "monthly_charges": 79.85,
-  "total_charges": 958.20,
-  "state": "California",
-  "gender": "Male",
-  "senior_citizen": "No",
-  "partner": "Yes",
-  "dependents": "No",
-  "phone_service": "Yes",
-  "multiple_lines": "No",
-  "internet_service": "Fiber optic",
-  "online_security": "No",
-  "online_backup": "No",
-  "device_protection": "No",
-  "tech_support": "No",
-  "streaming_tv": "No",
-  "streaming_movies": "No",
-  "contract": "Month-to-month",
-  "paperless_billing": "Yes",
-  "payment_method": "Electronic check"
-}
-```
-
-**Response:**
 ```json
 {
   "churn_probability": 0.7234,
@@ -422,109 +207,157 @@ O sistema utiliza dois thresholds configuráveis para categorização de risco (
 }
 ```
 
-### 9.2. Como Carregar Localmente
+- `churn_probability` arredondada a **4 casas** no código de serviço
+- `churn_prediction` é **estritamente** derivada do threshold **0,5** na probabilidade
+
+### 5.3 Disponibilidade e degradação
+
+- `GET /api/v1/health` retorna `status: "ok"` se o modelo foi carregado; caso contrário `"degraded"` e `model_loaded: false` (API pode responder, mas **não** use predições para decisões críticas).
+
+### 5.4 Latência e escala
+
+- Histograma Prometheus: `model_inference_seconds`
+- **Gunicorn** com 2 *workers* no Azure; latência depende de CPU e carga
+- Para *throughput* alto, avaliar mais réplicas no App Service ou filas assíncronas
+
+### 5.5 Dependências de runtime (imagem Docker)
+
+Principais pacotes em [`requirements.txt`](requirements.txt): `torch` (CPU), `scikit-learn`, `pandas`, `numpy`, `fastapi`, `uvicorn`, `gunicorn`, `prometheus-client`, `structlog`, etc.
+
+Desenvolvimento e treino completos: ver [`pyproject.toml`](pyproject.toml) (Jupyter, MLflow, XGBoost, LightGBM, DVC, …).
+
+---
+
+## 6. Monitoramento em produção
+
+### 6.1 Métricas recomendadas
+
+| Sinal | Onde | Ação sugerida |
+|-------|------|----------------|
+| **Taxa de 5xx** | `http_requests_total` + logs | Alerta se > 1% |
+| **Latência p95 inferência** | `model_inference_seconds` | Investigar CPU / cold start |
+| **Distribuição de scores** | `churn_probability_histogram` | Drift de entrada |
+| **Churn previsto vs base** | `churn_predictions_total` | Comparar com taxa real (requer *feedback* de negócio) |
+| **Modelo carregado** | `model_loaded` | Alerta se 0 |
+
+### 6.2 Drift e retreino
+
+- **Data drift:** mudança nas distribuições de *features* (KS, PSI por variável)
+- **Concept drift:** relação feature→churn muda (ex.: nova oferta agressiva de concorrente)
+- **Gatilhos de retreino sugeridos:** queda sustentada de ROC-AUC em validação periódica; drift forte em variáveis-chave; mudança de produto
+
+Frequência sugerida de revisão: **3–6 meses** ou após eventos de mercado relevantes.
+
+---
+
+## 7. Limitações técnicas
+
+1. **Tamanho e estática da base:** ~7k linhas; *snapshot* único — não captura séries temporais longas.
+2. **Generalização geográfica e de produto:** EUA / *telco* histórico; outros mercados exigem novo treino.
+3. **Desbalanceamento:** recall moderado — muitos churns **não** detectados com threshold 0,5.
+4. **Split aleatório:** se o treino usou divisão i.i.d., performance pode ser otimista vs. validação **temporal** (*walk-forward*).
+5. **Pickle:** carregar apenas de fonte confiável (mesmo repositório / artefato assinado); risco teórico de execução arbitrária se o arquivo for adulterado.
+6. **Custo computacional:** PyTorch + dependências são pesados vs. modelos só árvores; justificado pela ROC-AUC obtida no desafio.
+
+---
+
+## 8. Limitações de negócio
+
+- Sem **NPS**, **tickets** de suporte ou **uso real** de rede (GB/minutos) — variáveis fortes em churn real.
+- **Ofertas e preços** futuros não estão no histórico.
+- Uso indevido para **discriminar** grupos protegidos viola políticas éticas e legais.
+
+---
+
+## 9. Equidade e vieses
+
+### 9.1 Variáveis sensíveis presentes
+
+Gênero, idade (*senior*), local (*state*) aparecem como *features*. O modelo pode **correlacionar** esses campos com churn de forma **espúria** ou **socialmente sensível**.
+
+### 9.2 Boas práticas
+
+- Monitorar **taxas de predição positiva** e **taxa de erro** por segmento (quando houver *ground truth* operacional)
+- Não usar a saída como único critério para **tratamento desigual** de clientes
+- Combinar com **valor do cliente** (receita, margem) em processos de decisão — *não* implementado neste MVP
+
+### 9.3 EDA (resumo)
+
+- Contratos *month-to-month* e fibra costumam concentrar churn no dataset original
+- Idosos isolados são *feature* explícita (`isolated_senior`) — revisar impacto em políticas de retenção
+
+---
+
+## 10. Riscos éticos e conformidade
+
+| Risco | Mitigação |
+|-------|-----------|
+| **Privacidade** | Não enviar PII desnecessária à API; em produção real, pseudonimização e base legal (LGPD) |
+| **Transparência** | *Model card* + documentação de API; para explicabilidade por cliente, considerar SHAP em modelo substituto ou *surrogate* |
+| **Automação** | Manter **humano no loop** para ofertas financeiras relevantes |
+
+---
+
+## 11. Cenários de falha
+
+| Cenário | Efeito |
+|---------|--------|
+| **Cliente novo** (*tenure* muito baixo) | `cost_per_month` instável; maior incerteza |
+| **Categoria não vista** no treino | *One-hot* pode gerar vetor inesperado — validação Pydantic reduz, mas combinações raras existem |
+| **Mudança macro** (crise, fusão de operadoras) | Performance degrada até retreino |
+| **Falso positivo** | Custo de campanha / irritação do cliente |
+| **Falso negativo** | Perda de receita por churn não evitado |
+
+---
+
+## 12. Manutenção e governança
+
+| Artefato | Responsabilidade |
+|----------|-------------------|
+| Código e `Dockerfile` | Repositório Git + PRs |
+| Modelo `.pkl` | Versionar por tag/commit; idealmente **MLflow Model Registry** em cenário corporativo |
+| Dados | DVC / *lake* (fora do escopo mínimo deste MVP) |
+| **Model Card** | Atualizar a cada retreino material ou mudança de métricas alvo |
+
+---
+
+## 13. Como carregar o modelo offline (Python)
 
 ```python
 import pickle
-import pandas as pd
 from pathlib import Path
 
-# Carregar pipeline
-pipeline_path = Path("models/neural_network_pipeline.pkl")
-with open(pipeline_path, "rb") as f:
+path = Path("models/neural_network_pipeline.pkl")
+with path.open("rb") as f:
     pipeline = pickle.load(f)
 
-# Preparar dados (features originais + engineered)
-data = pd.DataFrame([{
-    "Tenure Months": 12,
-    "Monthly Charges": 79.85,
-    "Total Charges": 958.20,
-    "State": "California",
-    "Gender": "Male",
-    "Senior Citizen": "No",
-    "Partner": "Yes",
-    "Dependents": "No",
-    "Phone Service": "Yes",
-    "Multiple Lines": "No",
-    "Internet Service": "Fiber optic",
-    "Online Security": "No",
-    "Online Backup": "No",
-    "Device Protection": "No",
-    "Tech Support": "No",
-    "Streaming TV": "No",
-    "Streaming Movies": "No",
-    "Contract": "Month-to-month",
-    "Paperless Billing": "Yes",
-    "Payment Method": "Electronic check"
-}])
-
-# Feature engineering é feito automaticamente dentro do pipeline
-prob = pipeline.predict_proba(data)[0, 1]
-pred = pipeline.predict(data)[0]
-print(f"Probabilidade de churn: {prob:.4f}")
-print(f"Predição: {'Churn' if pred else 'Não Churn'}")
+# DataFrame com colunas do dataset + features derivadas
+# (replicar feature engineering do serviço ou usar o mesmo código)
+proba = pipeline.predict_proba(X)[0, 1]
 ```
 
-### 9.3. Requisitos
-
-Veja `requirements.txt` para dependências exatas. Principais libs:
-- `torch>=2.3` (PyTorch)
-- `scikit-learn>=1.5`
-- `pandas>=2.2`
-- `numpy>=1.26`
-- `imbalanced-learn>=0.12` (para SMOTE)
-
-### 9.4. Inferência com GPU (Opcional)
-
-Para melhor performance de inferência em alta carga:
-
-```python
-import torch
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-# O pipeline já está otimizado para uso com CPU, mas o código do
-# ChurnNetWrapper pode ser adaptado para mover o modelo para GPU
-```
+Para *feature engineering* idêntico ao serviço, reutilize `ChurnInferenceService.__feature_engineering` ou os notebooks em `notebooks/`.
 
 ---
 
-## 10. Referências
+## 14. Referências
 
-### 10.1. Recursos do Projeto
-
-- **Repositório:** `/home/guilherme.couceiro/prj/fiap/grupo-18-tech-challenger-fase-1`
-- **Notebooks:**
-  - `notebooks/01_eda.ipynb` - Análise exploratória
-  - `notebooks/02_feature_engineering.ipynb` - Engenharia de features
-  - `notebooks/03_modeling.ipynb` - Treinamento e comparação de modelos (inclui Neural Network)
-- **Código fonte:**
-  - `src/main.py` - FastAPI app
-  - `src/services/inference_service.py` - Serviço de inferência
-  - `utils/metrics.py` - Funções de avaliação
-  - `utils/neural_net.py` - Arquitetura da rede neural (ChurnNet, ChurnNetWrapper, FocalLoss)
-
-### 10.2. Dataset Original
-
-- IBM Sample Data Sets
-- Telco Customer Churn
-- https://www.kaggle.com/datasets/blastchar/telco-customer-churn
-
-### 10.3. Artigos Técnicos Referenciados
-
-1. **Focal Loss** - Lin et al. (2017). "Focal Loss for Dense Object Detection"
-   - Implementado para lidar com classes desbalanceadas
-2. **SMOTE** - Chawla et al. (2002). "SMOTE: Synthetic Minority Over-sampling Technique"
-   - Usado opcionalmente no treinamento da rede
-3. **Cosine Annealing com Warmup** - Loshchilov & Hutter (2016). "SGDR: Stochastic Gradient Descent with Warm Restarts"
-   - Scheduler de learning rate
+1. **Dataset:** IBM / Kaggle — [Telco Customer Churn](https://www.kaggle.com/datasets/blastchar/telco-customer-churn)  
+2. **Focal Loss:** Lin et al., 2017 — *Focal Loss for Dense Object Detection*  
+3. **SMOTE:** Chawla et al., 2002  
+4. **Model Cards:** Mitchell et al., 2019 — *Model Cards for Model Reporting*  
+5. **Código da rede:** [`utils/neural_net.py`](utils/neural_net.py)  
+6. **Documentação da API (usuário):** [README.md](README.md)  
 
 ---
 
-## 11. Histórico de Versões
+## 15. Histórico de versões do documento
 
-| Versão | Data | Mudanças |
-|--------|------|----------|
-| 1.0 | 2026-03-30 | Model Card inicial com Neural Network (ROC-AUC: 0.8464 teste, 0.8541 CV) |
+| Versão | Data | Alterações |
+|--------|------|------------|
+| 1.0 | 2026-03 | Versão inicial (Neural Network, ROC-AUC teste 0,8464 / CV 0,8541) |
+| 1.1 | 2026-04 | Ampliação operacional (API, health, deploy, métricas, correções de URL e escopo geográfico); alinhamento ao repositório `gui3561-ux` |
 
 ---
 
-**Nota:** Este Model Card deve ser atualizado sempre que o modelo for re-treinado ou houver mudanças significativas nos dados, pipeline ou performance.
+*Este Model Card deve ser revisado após cada retreino significativo, mudança de dados ou alteração de métricas de negócio.*
