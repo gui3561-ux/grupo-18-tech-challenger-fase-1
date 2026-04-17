@@ -1,5 +1,5 @@
-import pytest
 from unittest.mock import MagicMock, patch
+
 from src.schemas.inference import ChurnResponse
 
 
@@ -47,9 +47,7 @@ class TestInferenceEndpoint:
         assert response.status_code == 422
 
     def test_predict_empty_body_returns_422(self, client_with_mock_model):
-        response = client_with_mock_model.post(
-            "/api/v1/inference/predict", json={}
-        )
+        response = client_with_mock_model.post("/api/v1/inference/predict", json={})
         assert response.status_code == 422
 
     def test_predict_invalid_gender_returns_422(
@@ -86,9 +84,7 @@ class TestInferenceEndpoint:
     def test_predict_calls_service(
         self, client_with_mock_model, mock_inference_service, sample_payload
     ):
-        client_with_mock_model.post(
-            "/api/v1/inference/predict", json=sample_payload
-        )
+        client_with_mock_model.post("/api/v1/inference/predict", json=sample_payload)
         mock_inference_service.predict.assert_called_once()
 
     def test_predict_no_churn_response(self, sample_payload):
@@ -103,6 +99,7 @@ class TestInferenceEndpoint:
         with patch("src.routers.inference._service", no_churn_service):
             from fastapi import FastAPI
             from fastapi.testclient import TestClient
+
             from src.api.v1.router import api_router
 
             app = FastAPI()
@@ -110,9 +107,7 @@ class TestInferenceEndpoint:
             app.include_router(api_router)
 
             with TestClient(app) as client:
-                response = client.post(
-                    "/api/v1/inference/predict", json=sample_payload
-                )
+                response = client.post("/api/v1/inference/predict", json=sample_payload)
                 body = response.json()
 
                 assert body["churn_prediction"] is False

@@ -1,11 +1,9 @@
 import time
-import pytest
 
 INFERENCE_URL = "/api/v1/inference/predict"
 
 
 class TestInferenceSmoke:
-
     def test_inference_endpoint_is_reachable(
         self, client_with_mock_model, sample_payload
     ):

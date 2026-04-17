@@ -165,11 +165,23 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 
 ### Instalação
 
+Ambiente **completo** (testes, Ruff e Mypy — recomendado para desenvolvimento):
+
 ```bash
 uv venv
 source .venv/bin/activate
+uv sync --extra dev
+```
+
+Somente dependências de **runtime** da API (sem pytest/lint):
+
+```bash
 uv sync
 ```
+
+### Makefile (atalhos)
+
+Na raiz do repositório, `make help` lista os alvos. Exemplos: `make install-dev`, `make ci` (lint + testes como no GitHub Actions), `make run`.
 
 ### Executar a API
 
@@ -187,9 +199,12 @@ uv run pytest
 
 ### Linting e verificação de tipos
 
+Código da API e testes (`src`, `tests`). Utilitários em `utils/` e notebooks seguem fora do escopo padrão do Ruff no CI.
+
 ```bash
-uv run ruff check .
-uv run mypy .
+uv run ruff check src tests
+uv run ruff format src tests
+uv run mypy src
 ```
 
 ### Teste rápido com curl

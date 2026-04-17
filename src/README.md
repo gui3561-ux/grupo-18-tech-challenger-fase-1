@@ -190,9 +190,9 @@ pytest -m integration
 ## Qualidade de código
 
 ```bash
-ruff check .       # lint
-ruff format .      # formatação
-mypy .             # checagem estática de tipos
+ruff check src tests       # lint
+ruff format src tests      # formatação
+mypy src                   # checagem estática de tipos
 ```
 
 ---

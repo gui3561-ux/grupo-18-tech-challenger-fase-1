@@ -1,6 +1,6 @@
 """Definições de métricas Prometheus para monitoramento do modelo de churn."""
 
-from prometheus_client import Counter, Histogram, Gauge, CollectorRegistry
+from prometheus_client import CollectorRegistry, Counter, Gauge, Histogram
 
 registry = CollectorRegistry()
 

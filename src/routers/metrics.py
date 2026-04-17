@@ -1,14 +1,15 @@
 """Router para expor métricas no formato Prometheus."""
 
 from fastapi import APIRouter, Response
-from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
+
 from src.metrics import registry
 
 router = APIRouter(prefix="/metrics", tags=["Monitoring"])
 
 
 @router.get("/", include_in_schema=False)
-async def metrics():
+async def metrics() -> Response:
     """Endpoint para expor métricas no formato Prometheus.
 
     Retorna todas as métricas coletadas no formato texto do Prometheus.
@@ -21,6 +22,6 @@ async def metrics():
 
 
 @router.get("/health", include_in_schema=False)
-async def metrics_health():
+async def metrics_health() -> dict[str, str]:
     """Health check para o endpoint de métricas."""
     return {"status": "ok", "metrics_endpoint": "/metrics"}

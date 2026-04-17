@@ -1,20 +1,21 @@
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+
+import structlog
 from fastapi import FastAPI
+
 from src.api.v1.router import api_router
 from src.core.config import settings
 from src.core.logging import configure_logging
-from src.middleware import LatencyLoggerMiddleware
-from src.services.inference_service import ChurnInferenceService
-from src.services.inference_service import ModelNotLoadedError
 from src.metrics import model_loaded
-from pathlib import Path
-import structlog
+from src.middleware import LatencyLoggerMiddleware
+from src.services.inference_service import ChurnInferenceService, ModelNotLoadedError
 
 logger = structlog.get_logger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     configure_logging(settings.log_level)
 
     try:

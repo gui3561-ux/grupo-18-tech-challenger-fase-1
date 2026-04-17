@@ -1,6 +1,5 @@
 import pandas as pd
-from pandera.pandas import Column, DataFrameSchema, Check
-
+from pandera.pandas import Check, Column, DataFrameSchema
 
 HEALTH_URL = "/api/v1/health"
 
@@ -17,8 +16,10 @@ health_response_schema = DataFrameSchema(
         ),
         "version": Column(
             str,
-            checks=Check(lambda x: x.str.match(r"^\d+\.\d+\.\d+$"),
-                        error="version must follow semver format"),
+            checks=Check(
+                lambda x: x.str.match(r"^\d+\.\d+\.\d+$"),
+                error="version must follow semver format",
+            ),
             nullable=False,
         ),
     }
@@ -26,7 +27,6 @@ health_response_schema = DataFrameSchema(
 
 
 class TestHealthSchema:
-
     def test_health_response_schema_when_model_is_loaded(self, client_loaded):
         response = client_loaded.get(HEALTH_URL)
         df = pd.DataFrame([response.json()])

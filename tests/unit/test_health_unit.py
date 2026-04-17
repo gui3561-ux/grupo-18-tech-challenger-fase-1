@@ -1,7 +1,9 @@
-import pytest
 from unittest.mock import MagicMock
-from src.routers.health import health_check
+
+import pytest
+
 from src.core.config import settings
+from src.routers.health import health_check
 
 
 async def build_mock_request(model_loaded: bool) -> MagicMock:
@@ -11,7 +13,6 @@ async def build_mock_request(model_loaded: bool) -> MagicMock:
 
 
 class TestHealthUnit:
-
     @pytest.mark.asyncio
     async def test_status_ok_when_model_is_loaded(self):
         request = await build_mock_request(model_loaded=True)
