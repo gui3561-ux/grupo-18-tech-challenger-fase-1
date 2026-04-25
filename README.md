@@ -43,6 +43,7 @@ API REST de **predição de churn** para clientes de telecomunicações, servida
 |---------|-----|
 | **API (produção)** | https://churn-prediction-api.azurewebsites.net |
 | **Health** | https://churn-prediction-api.azurewebsites.net/api/v1/health |
+| **Predict** | https://churn-prediction-api.azurewebsites.net/api/v1/inference/predict |
 | **Swagger UI** | https://churn-prediction-api.azurewebsites.net/docs |
 | **ReDoc** | https://churn-prediction-api.azurewebsites.net/redoc |
 | **Métricas Prometheus** | https://churn-prediction-api.azurewebsites.net/api/v1/metrics/ |
