@@ -106,35 +106,22 @@ Dependências completas de pesquisa/treino (Jupyter, MLflow, LightGBM, XGBoost, 
 
 Secção única com o fluxo **instalar → executar → entender o desenho** do sistema.
 
-### Pré-requisitos
-
-- Python **3.11+** (recomendado) e Git
-- Docker (opcional, para paridade com produção)
-- `jq` (opcional, só para deixar o output do `curl` mais legível)
-
-### TL;DR (rodar local em 6 comandos)
-
-Se você já tem Python 3.11+ e `uv`:
-
-```bash
-git clone https://github.com/gui3561-ux/grupo-18-tech-challenger-fase-1.git
-cd grupo-18-tech-challenger-fase-1
-uv venv
-source .venv/bin/activate
-uv sync --extra dev
-make run
-```
-
-Depois abra `http://localhost:8000/docs`.
 
 ### Setup (ambiente de desenvolvimento)
 
 Esta seção descreve duas formas equivalentes de preparar o ambiente:
 
-- **Opção A (recomendada)**: usando **uv** (reprodutível e alinhado ao CI).
-- **Opção B (alternativa)**: `python -m venv` + `pip` (caso você não queira usar uv).
+Usando **uv** (reprodutível e alinhado ao CI).
 
-#### Opção A — Ambiente local com `uv` (recomendado)
+
+### Pré-requisitos
+
+- Python **3.11+** e Git
+- Docker (opcional, para paridade com produção)
+- `jq` (opcional, só para deixar o output do `curl` mais legível)
+
+
+#### Ambiente local com `uv`
 
 1) Clonar o projeto e entrar na pasta:
 
@@ -181,29 +168,6 @@ uv sync
 ```bash
 ls -lh models/neural_network_pipeline.pkl
 ```
-
-#### Opção B — Ambiente local com `venv` + `pip` (alternativa)
-
-> Preferimos `uv` porque ele usa `uv.lock` e deixa a instalação mais determinística. Esta opção existe só para facilitar em ambientes onde `uv` não esteja disponível.
-
-1) Criar venv:
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-```
-
-2) Instalar dependências:
-
-- **Para rodar a API** (runtime):
-
-```bash
-pip install -r requirements.txt
-```
-
-- **Para dev/testes** (equivalente ao extra dev do `uv`):
-  - Use `uv` (opção A) se possível, pois é o fluxo suportado no CI.
 
 ### Variáveis de ambiente (local)
 
