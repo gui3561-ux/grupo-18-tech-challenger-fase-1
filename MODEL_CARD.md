@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |-------|--------|
-| **Versão do documento** | 1.1 |
+| **Versão do documento** | 1.2 |
 | **Última atualização** | Abril/2026 |
 | **Equipe** | Grupo 18 — Tech Challenge Fase 1 (FIAP Pós Tech) |
 | **Repositório** | https://github.com/gui3561-ux/grupo-18-tech-challenger-fase-1 |
@@ -61,8 +61,8 @@ Estimar **P(churn)** — probabilidade de o cliente **cancelar** o serviço em u
 
 | Classe | Proporção aproximada |
 |--------|----------------------|
-| Não churn (0) | ~81% |
-| Churn (1) | ~19% |
+| Não churn (0) | **73,5%** (5.174) |
+| Churn (1) | **26,5%** (1.869) |
 
 *Desbalanceamento tratado no treino com **SMOTE** (pipeline) e **Focal Loss** (γ = 3,0).*
 
@@ -76,7 +76,9 @@ Valores ausentes pontuais (ex.: `Total Charges`) foram tratados (ex.: mediana) n
 
 ### 2.4 Cobertura geográfica e representatividade
 
-O dataset IBM Telco refere-se a clientes de **telecom nos EUA**, com coluna de **estado** (vários estados). **Não** restringir mentalmente o domínio a um único estado: o modelo foi treinado em **mistura de estados**; ainda assim, **não há garantia** de generalização para outros países, regulamentos ou ofertas de produto.
+O dataset de referência, conforme a documentação de EDA do repositório, descreve o recorte **Telco California (EUA)**. Em outras palavras: trata-se de um *snapshot* público e acadêmico; **não há garantia** de generalização para outros estados/países, perfis de oferta, políticas de preço, canais de atendimento ou contextos regulatórios.
+
+> Observação: colunas geográficas de alta cardinalidade (cidade/lat/long/zip) foram removidas por ruído e baixa generalização; `State` foi mantida por consistência do esquema, mas no recorte documentado tende a não agregar variabilidade relevante.
 
 ### 2.5 Features utilizadas pelo modelo (após engenharia)
 
@@ -101,6 +103,17 @@ A API recebe **nomes em snake_case** (`tenure_months`, `payment_method`, …). O
 ---
 
 ## 3. Metodologia de treino
+
+### 3.0 Protocolo de avaliação (como medimos)
+
+O fluxo de modelagem (ver `docs/03_modeling.md`) foi desenhado para comparar múltiplos classificadores sob um protocolo consistente:
+
+- **Split treino/teste:** 80/20 estratificado (snapshot i.i.d.)
+- **Validação cruzada:** `StratifiedKFold` com **5 folds** (com *shuffle* e `random_state=42`)
+- **Otimização:** `RandomizedSearchCV` (tipicamente `n_iter=60`) com **scorer ROC-AUC customizado** (para compatibilidade com o wrapper PyTorch)
+- **Métrica principal:** **ROC-AUC** (ranking), complementada por accuracy/precision/recall/F1 no holdout
+
+Esse protocolo é adequado para um MVP acadêmico. Em um cenário corporativo, seria recomendado também um split **temporal** (*walk-forward*) quando houver “data de referência” e churn observado ao longo do tempo.
 
 ### 3.1 Pré-processamento (dentro do `Pipeline`)
 
@@ -169,6 +182,13 @@ Valores típicos do melhor modelo (podem variar levemente entre commits de trein
 | **F1** | ~0,58–0,60 | Estimativa |
 
 Valores de precisão/recall/F1 são **ordens de grandeza**; o *threshold* de negócio pode diferir de 0,5.
+
+### 4.4 Calibração e decisão (nota importante)
+
+O modelo retorna probabilidade via `predict_proba`, mas este MVP **não calibra** explicitamente probabilidades (ex.: Platt/Isotonic). Assim:
+
+- trate `churn_probability` como **score de priorização** (ranking) antes de tratá-la como probabilidade “bem calibrada”;
+- ajuste o **threshold operacional** conforme capacidade de atendimento (ex.: campanhas) e custo de FP/FN.
 
 ### 4.2 Matriz de confusão (ilustrativa, threshold 0,5)
 
@@ -248,6 +268,14 @@ Desenvolvimento e treino completos: ver [`pyproject.toml`](pyproject.toml) (Jupy
 
 Frequência sugerida de revisão: **3–6 meses** ou após eventos de mercado relevantes.
 
+### 6.3 Integração com Grafana (como chega no dashboard)
+
+Este repositório adota o padrão Prometheus:
+
+- A API expõe séries em `GET /api/v1/metrics/` (formato Prometheus).
+- Um coletor **Grafana Alloy** (opcional, descrito em `monitoring/`) faz *scrape* e envia por *remote write* ao Prometheus do Grafana Cloud.
+- O dashboard (JSON exportado) consulta essas séries no datasource Prometheus do Grafana.
+
 ---
 
 ## 7. Limitações técnicas
@@ -281,7 +309,17 @@ Gênero, idade (*senior*), local (*state*) aparecem como *features*. O modelo po
 - Não usar a saída como único critério para **tratamento desigual** de clientes
 - Combinar com **valor do cliente** (receita, margem) em processos de decisão — *não* implementado neste MVP
 
-### 9.3 EDA (resumo)
+### 9.3 O que não foi medido neste MVP (transparência)
+
+Por se tratar de um dataset público e de um escopo acadêmico, este trabalho **não** apresenta:
+
+- avaliação formal de métricas de equidade (ex.: *equalized odds*) com segmentação robusta por grupos protegidos;
+- auditoria de viés em dados reais de uma operadora (que exigiria governança e base legal);
+- análise de impacto em políticas comerciais e possíveis efeitos adversos.
+
+Esses pontos são recomendados em uma evolução para produção real.
+
+### 9.4 EDA (resumo)
 
 - Contratos *month-to-month* e fibra costumam concentrar churn no dataset original
 - Idosos isolados são *feature* explícita (`isolated_senior`) — revisar impacto em políticas de retenção
@@ -357,6 +395,7 @@ Para *feature engineering* idêntico ao serviço, reutilize `ChurnInferenceServi
 |--------|------|------------|
 | 1.0 | 2026-03 | Versão inicial (Neural Network, ROC-AUC teste 0,8464 / CV 0,8541) |
 | 1.1 | 2026-04 | Ampliação operacional (API, health, deploy, métricas, correções de URL e escopo geográfico); alinhamento ao repositório `gui3561-ux` |
+| 1.2 | 2026-04 | Correção da distribuição do target (73,5% / 26,5%), detalhamento do protocolo de avaliação, nota sobre calibração e transparência de fairness |
 
 ---
 
