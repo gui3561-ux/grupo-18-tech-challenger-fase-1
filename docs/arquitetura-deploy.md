@@ -77,7 +77,7 @@ O Web App `churn-prediction-api` roda no plano `asp-churn-api`, atualmente em SK
 
 ### 3.4 Integração contínua: GitHub Actions
 
-O ficheiro `.github/workflows/deploy.yml` dispara em *push* à `main` e permite execução manual (`workflow_dispatch`). Os passos fazem *login* no GHCR com `GITHUB_TOKEN`, *build* com cache do Buildx, *push* das tags, *login* no Azure com um *service principal* (segredo `AZURE_CREDENTIALS`) e chamada à ação `azure/webapps-deploy` apontando para a imagem com tag do commit.
+O ficheiro `.github/workflows/ci.yml` corre **testes** (lint, Mypy, pytest) em todas as branches. O *job* de **build e deploy** só corre na `main`, depois de o *job* de testes concluir com sucesso, e dispara em *push* à `main` ou por execução manual (`workflow_dispatch`). Os passos de deploy fazem *login* no GHCR com `GITHUB_TOKEN`, *build* com cache do Buildx, *push* das tags, *login* no Azure com um *service principal* (segredo `AZURE_CREDENTIALS`) e chamada à ação `azure/webapps-deploy` apontando para a imagem com tag do commit.
 
 **Justificativa:** o repositório já estava no GitHub; manter o CI no mesmo sítio evita multiplicar fornecedores e segredos. O uso de tag por SHA em vez de só `latest` no deploy ajuda a auditoria (cada deploy no portal pode ser correlacionado com um commit).
 
@@ -112,7 +112,7 @@ Esta arquitetura é adequada a um **MVP** e a uma disciplina de pós-graduação
 | Artefato | Função |
 |----------|--------|
 | `Dockerfile` | Definição da imagem de produção |
-| `.github/workflows/deploy.yml` | Pipeline CI/CD |
+| `.github/workflows/ci.yml` | Pipeline CI/CD (testes → build → deploy na `main`) |
 | `monitoring/alloy-config.alloy` | Configuração do coletor Prometheus → Grafana Cloud |
 | `monitoring/deploy-alloy.sh` | Script auxiliar para criar ACI e *file share* com a config |
 | `docs/grafana_dashboard.json` | Dashboard para importar no Grafana |

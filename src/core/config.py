@@ -1,5 +1,5 @@
-from pathlib import Path
 from pydantic_settings import BaseSettings
+
 
 class Settings(BaseSettings):
     model_path: str = "models/neural_network_pipeline.pkl"
@@ -10,6 +10,9 @@ class Settings(BaseSettings):
 
     risk_threshold_low: float = 0.3
     risk_threshold_medium: float = 0.6
+
+    rate_limit_predict: str = "10/minute"
+    rate_limit_health: str = "60/minute"
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

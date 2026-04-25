@@ -1,7 +1,8 @@
-import pytest
 from contextlib import asynccontextmanager
-from fastapi.testclient import TestClient
 from unittest.mock import MagicMock, patch
+
+import pytest
+from fastapi.testclient import TestClient
 
 from src.schemas.inference import ChurnResponse
 
@@ -87,3 +88,13 @@ def client_with_mock_model(mock_inference_service):
         app = _create_test_app(model_loaded=True)
         with TestClient(app) as client:
             yield client
+
+
+@pytest.fixture(autouse=True)
+def reset_rate_limiter():
+    """Reseta o storage do limiter entre testes para evitar 429 espúrios."""
+    from src.rate_limit import limiter
+
+    limiter._storage.reset()
+    yield
+    limiter._storage.reset()
