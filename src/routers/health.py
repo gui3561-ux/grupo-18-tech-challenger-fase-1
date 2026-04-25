@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Request
 
 from src.core.config import settings
+from src.rate_limit import limiter
 from src.schemas.health import HealthResponse
 
 router = APIRouter(tags=["Health"])
@@ -12,6 +13,7 @@ router = APIRouter(tags=["Health"])
     summary="Healthcheck",
     description="Verifica se a API está operacional.",
 )
+@limiter.limit(settings.rate_limit_predict)
 async def health_check(request: Request) -> HealthResponse:
     model_loaded: bool = getattr(request.app.state, "model_loaded", False)
     return HealthResponse(
