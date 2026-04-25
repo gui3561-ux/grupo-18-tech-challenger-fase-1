@@ -4,6 +4,13 @@
 
 API REST de **predição de churn** para clientes de telecomunicações, servida com **FastAPI**, **Gunicorn + Uvicorn** em produção e um **pipeline de Machine Learning** serializado (scikit-learn + **PyTorch** — rede `ChurnNet`). O serviço expõe inferência, *health check*, documentação OpenAPI e métricas **Prometheus** para observabilidade.
 
+**O que este repositório entrega (em 1 minuto):**
+
+- **Modelo de ML empacotado** em um artefato versionado (`.pkl`) pronto para servir.
+- **API HTTP** com contrato validado (schemas), *health check* e docs (`/docs`).
+- **Observabilidade** com métricas Prometheus (`/api/v1/metrics/`) e dashboard no Grafana.
+- **CI/CD** automatizado: testes em PR, build/deploy na `main` (GitHub Actions → GHCR → Azure App Service).
+
 ---
 
 ## Índice
@@ -11,20 +18,22 @@ API REST de **predição de churn** para clientes de telecomunicações, servida
 1. [Links rápidos](#links-de-acesso)
 2. [Visão geral](#visão-geral)
 3. [Stack técnica](#stack-técnica)
-4. [**Setup, execução e arquitetura**](#setup-execução-e-arquitetura) ← *guia principal para rodar o projeto*
-5. [Modelo e métricas de ML](#modelo-e-métricas-de-ml)
-6. [API HTTP](#api-http)
-7. [Engenharia de features na inferência](#engenharia-de-features-na-inferência)
-8. [Configuração e variáveis de ambiente](#configuração-e-variáveis-de-ambiente)
-9. [Qualidade de código e testes](#qualidade-de-código-e-testes)
-10. [Container Docker](#container-docker) *(detalhe; resumo no guia acima)*
-11. [CI/CD (GitHub Actions)](#cicd-github-actions)
-12. [Monitoramento e observabilidade](#monitoramento-e-observabilidade)
-13. [Deploy e documentação de infraestrutura](#deploy-e-documentação-de-infraestrutura)
-14. [Estrutura do repositório](#estrutura-do-repositório)
-15. [Trocar de modelo](#trocar-de-modelo)
-16. [Solução de problemas](#solução-de-problemas)
-17. [Licença](#licença)
+4. [Objetivo do MVP e escopo](#objetivo-do-mvp-e-escopo)
+5. [**Setup, execução e arquitetura**](#setup-execução-e-arquitetura) ← *guia principal para rodar o projeto*
+6. [Modelo e métricas de ML](#modelo-e-métricas-de-ml)
+7. [API HTTP](#api-http)
+8. [Engenharia de features na inferência](#engenharia-de-features-na-inferência)
+9. [KPIs de negócio (o que existe e o que falta)](#kpis-de-negócio-o-que-existe-e-o-que-falta)
+10. [Configuração e variáveis de ambiente](#configuração-e-variáveis-de-ambiente)
+11. [Qualidade de código e testes](#qualidade-de-código-e-testes)
+12. [Container Docker](#container-docker) *(detalhe; resumo no guia acima)*
+13. [CI/CD (GitHub Actions)](#cicd-github-actions)
+14. [Monitoramento e observabilidade](#monitoramento-e-observabilidade)
+15. [Deploy e documentação de infraestrutura](#deploy-e-documentação-de-infraestrutura)
+16. [Estrutura do repositório](#estrutura-do-repositório)
+17. [Trocar de modelo](#trocar-de-modelo)
+18. [Solução de problemas](#solução-de-problemas)
+19. [Licença](#licença)
 
 ---
 
@@ -34,6 +43,7 @@ API REST de **predição de churn** para clientes de telecomunicações, servida
 |---------|-----|
 | **API (produção)** | https://churn-prediction-api.azurewebsites.net |
 | **Health** | https://churn-prediction-api.azurewebsites.net/api/v1/health |
+| **Predict** | https://churn-prediction-api.azurewebsites.net/api/v1/inference/predict |
 | **Swagger UI** | https://churn-prediction-api.azurewebsites.net/docs |
 | **ReDoc** | https://churn-prediction-api.azurewebsites.net/redoc |
 | **Métricas Prometheus** | https://churn-prediction-api.azurewebsites.net/api/v1/metrics/ |
@@ -55,7 +65,24 @@ O sistema estima a **probabilidade de churn** (cancelamento) com base em:
 
 **Público-alvo:** times de retenção, CRM, marketing e gestão que precisam **priorizar** clientes para ações preventivas (campanhas, descontos, *save desks*).
 
+### Por que isso importa (visão executiva)
+
+- **Problema**: churn é uma das principais causas de perda de receita em telecom; agir tarde aumenta custo de retenção e reduz eficácia das campanhas.
+- **Solução**: um serviço de inferência que entrega probabilidade/decisão de churn por cliente, com observabilidade para operar em produção.
+- **Valor do MVP**: reduz o atrito entre “modelo no notebook” e “produto consumível”, deixando o caminho pronto para integrar dados reais de CRM/campanhas e gerar KPIs de negócio.
+
 **Documentação de modelo (ética, limitações, dados):** [MODEL_CARD.md](MODEL_CARD.md).
+
+---
+
+## Objetivo do MVP e escopo
+
+Este projeto foi desenhado como um **MVP acadêmico** com foco em engenharia de entrega:
+
+- **Inclui**: pipeline de ML empacotado, API de inferência, health check, documentação OpenAPI, métricas Prometheus, dashboard Grafana, CI/CD e deploy em nuvem.
+- **Não inclui (por design)**: autenticação/autorização, persistência de eventos, trilha de auditoria por cliente, integração com CRM/billing, cálculo de KPIs de churn “real” (ex.: churn mensal observado), nem automação de campanhas.
+
+Em outras palavras: aqui existe a **camada técnica** para prever churn e operar o serviço; **KPIs de negócio** dependem de dados e processos fora do escopo deste MVP.
 
 ---
 
@@ -80,17 +107,72 @@ Dependências completas de pesquisa/treino (Jupyter, MLflow, LightGBM, XGBoost, 
 
 Secção única com o fluxo **instalar → executar → entender o desenho** do sistema.
 
+
 ### Setup (ambiente de desenvolvimento)
 
-| Passo | Comando / ação |
-|-------|----------------|
-| 1. Clonar | `git clone https://github.com/gui3561-ux/grupo-18-tech-challenger-fase-1.git && cd grupo-18-tech-challenger-fase-1` |
-| 2. Instalar **uv** | [Instalação oficial](https://docs.astral.sh/uv/) (ex.: `curl -LsSf https://astral.sh/uv/install.sh \| sh`) |
-| 3. Criar venv | `uv venv` → ativar: `source .venv/bin/activate` (Linux/macOS) ou `.venv\Scripts\activate` (Windows) |
-| 4. Instalar dependências | **Recomendado:** `uv sync --extra dev` (pytest, Ruff, Mypy). **Só API:** `uv sync` |
-| 5. Artefato do modelo | Garantir que existe `models/neural_network_pipeline.pkl` (incluso no repo ou gerado no treino). Sem este ficheiro, o *health* fica `degraded` e predições falham. |
+Esta seção descreve duas formas equivalentes de preparar o ambiente:
 
-Opcional: ficheiro `.env` na raiz para sobrescrever `MODEL_PATH`, `LOG_LEVEL`, etc. (ver [Configuração](#configuração-e-variáveis-de-ambiente)).
+Usando **uv** (reprodutível e alinhado ao CI).
+
+
+### Pré-requisitos
+
+- Python **3.11+** e Git
+- Docker (opcional, para paridade com produção)
+- `jq` (opcional, só para deixar o output do `curl` mais legível)
+
+
+#### Ambiente local com `uv`
+
+1) Clonar o projeto e entrar na pasta:
+
+```bash
+git clone https://github.com/gui3561-ux/grupo-18-tech-challenger-fase-1.git
+cd grupo-18-tech-challenger-fase-1
+```
+
+2) Instalar o `uv`:
+
+- Guia oficial: `https://docs.astral.sh/uv/`
+- Exemplo (Linux/macOS):
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+3) Criar a venv e ativar:
+
+```bash
+uv venv
+source .venv/bin/activate
+```
+
+4) Instalar dependências:
+
+- **Completo (dev + testes + qualidade)**:
+
+```bash
+uv sync --extra dev
+```
+
+- **Apenas runtime da API** (mais leve):
+
+```bash
+uv sync
+```
+
+5) Verificar o artefato do modelo:
+
+- O serviço espera, por padrão, `models/neural_network_pipeline.pkl`.
+- Se esse arquivo não existir, o endpoint de health sobe como `degraded` e a inferência não deve ser usada.
+
+```bash
+ls -lh models/neural_network_pipeline.pkl
+```
+
+### Variáveis de ambiente (local)
+
+Opcional: criar um arquivo `.env` na raiz para sobrescrever `MODEL_PATH`, `LOG_LEVEL`, thresholds de risco, etc. (ver [Configuração](#configuração-e-variáveis-de-ambiente)).
 
 ### Execução
 
@@ -108,13 +190,34 @@ uv run uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
 #### B) Makefile (atalhos)
 
 ```bash
+make help           # lista tudo + variáveis suportadas
+make venv           # uv venv
+make install        # uv sync
 make install-dev    # uv sync --extra dev
 make run            # uvicorn com reload (HOST/PORT configuráveis)
+make run-prod       # uvicorn sem reload
 make test           # pytest
+make test-verbose   # pytest -v
+make lint           # ruff check (src + tests)
+make format         # ruff format (src + tests)
+make typecheck      # mypy (src)
 make ci             # mesmo pipeline que o GitHub Actions (lint + mypy + testes)
+make docker-build   # docker build (IMAGE_NAME=...)
 ```
 
-`make help` lista todos os alvos.
+Variáveis úteis:
+
+- **`HOST`** e **`PORT`**:
+
+```bash
+make run HOST=127.0.0.1 PORT=8001
+```
+
+- **`IMAGE_NAME`** no build Docker:
+
+```bash
+make docker-build IMAGE_NAME=churn-api:local
+```
 
 #### C) Container Docker (paridade com produção)
 
@@ -131,6 +234,10 @@ A imagem usa `requirements.txt` + PyTorch **CPU** (ver [Container Docker](#conta
 
 ```bash
 curl -sS http://localhost:8000/api/v1/health | jq .
+curl -sS http://localhost:8000/api/v1/metrics/health | jq .
+```
+
+```bash
 curl -sS -X POST http://localhost:8000/api/v1/inference/predict \
   -H "Content-Type: application/json" \
   -d @- <<'EOF'
@@ -143,71 +250,10 @@ curl -sS -X POST http://localhost:8000/api/v1/inference/predict \
 EOF
 ```
 
-### Arquitetura da aplicação (lógica)
-
-Fluxo em camadas, do pedido HTTP ao modelo:
-
-```mermaid
-flowchart LR
-  subgraph client [Cliente]
-    HTTP[HTTP/JSON]
-  end
-  subgraph fastapi [FastAPI]
-    R[Router /api/v1]
-    MW[Middleware métricas HTTP]
-  end
-  subgraph domain [Domínio]
-    S[ChurnInferenceService]
-    P[Pipeline sklearn + PyTorch]
-  end
-  HTTP --> MW --> R
-  R --> S
-  S --> P
+```bash
+curl -sS http://localhost:8000/api/v1/metrics/ | head -n 40
 ```
 
-- **`src/main.py`:** cria a app, *lifespan* (carrega `ChurnInferenceService` em `app.state`), regista middleware e routers.  
-- **`src/routers/`:** `health`, `inference`, `metrics` (Prometheus).  
-- **`src/services/inference_service.py`:** validação já feita pelo Pydantic → `DataFrame` → *feature engineering* → `predict_proba` → métricas + resposta.  
-- **`src/metrics.py`:** registo Prometheus isolado (`CollectorRegistry`).  
-- **Artefato:** `pickle` com `Pipeline` scikit-learn; o estimador neural está em [`utils/neural_net.py`](utils/neural_net.py).
-
-### Arquitetura de implantação (infraestrutura)
-
-Pipeline de entrega contínua e runtime em nuvem:
-
-```mermaid
-flowchart TB
-  dev[Desenvolvedor / Git]
-  ga[GitHub Actions ci.yml]
-  test[Job: testes Ruff Mypy pytest]
-  build[Job: Docker build e push]
-  ghcr[GHCR ghcr.io/.../churn-api]
-  azure[Azure App Service Linux]
-  web[churn-prediction-api.azurewebsites.net]
-  alloy[Opcional: Grafana Alloy ACI]
-  graf[Grafana Cloud Prometheus]
-
-  dev -->|push PR| ga
-  dev -->|push main| ga
-  ga --> test
-  test -->|sucesso só em main| build
-  build --> ghcr
-  build --> azure
-  azure --> web
-  web -.->|scrape /api/v1/metrics| alloy
-  alloy --> graf
-```
-
-| Componente | Função |
-|------------|--------|
-| **GitHub Actions** | Um único workflow: qualidade em todas as branches; *build* + *deploy* só na `main` após testes. |
-| **GHCR** | Registry da imagem versionada por commit (`:sha`) e `latest`. |
-| **Azure App Service** | Puxa a imagem; variáveis como `WEBSITES_PORT` / *connection strings* conforme portal. |
-| **Grafana Alloy** | Coleta métricas expostas pela API para dashboards remotos. |
-
-Documentação de decisões (SKU, custos, segredos): [**docs/arquitetura-deploy.md**](docs/arquitetura-deploy.md).
-
----
 
 ## Modelo e métricas de ML
 
@@ -279,7 +325,7 @@ curl -sS -X POST https://churn-prediction-api.azurewebsites.net/api/v1/inference
     "tenure_months": 2,
     "monthly_charges": 70.70,
     "total_charges": 151.65,
-    "state": "California",
+    "state": "CA",
     "gender": "Female",
     "senior_citizen": "No",
     "partner": "No",
@@ -323,6 +369,35 @@ Antes do `predict_proba`, o [`ChurnInferenceService`](src/services/inference_ser
 | `cost_per_month` | `Monthly Charges / (Tenure Months + 1)` |
 
 Os nomes das colunas enviadas ao pipeline seguem o **dataset tabular** (`Tenure Months`, `Payment Method`, etc.).
+
+---
+
+## KPIs de negócio (o que existe e o que falta)
+
+O endpoint `/api/v1/metrics/` expõe métricas de **produto técnico** (observabilidade e inferência). Já KPIs clássicos de negócio dependem de dados de CRM/campanha/cancelamento que **não fazem parte** deste MVP.
+
+### KPIs solicitados no enunciado (gap explícito)
+
+| KPI | Está implementado como métrica Prometheus? | Motivo / observação |
+|---|---:|---|
+| **Taxa de churn mensal** | Não | O projeto tem churn do **dataset** (EDA), mas não recalcula churn observado por mês em produção (não há base real + eventos de cancelamento). |
+| **Taxa de retenção pós-campanha** | Não | Não existe pipeline de campanha (contato → outcome → cancelamento) nem armazenamento de eventos. |
+| **ROI da campanha de retenção** | Não | Não há custo de intervenção nem LTV/LTV estimado integrado ao serviço. |
+| **Cobertura de clientes de alto risco** | Não diretamente | Há **probabilidade** e histograma, mas não existe “% da base em alto risco” porque não há “base ativa” e contagem de clientes/segmentos em produção. |
+
+### O que o projeto já fornece para viabilizar esses KPIs
+
+- **Probabilidade de churn por cliente** (API) → insumo para priorização e para “alto risco”.
+- **Métricas de volume e distribuição de predições** (`churn_predictions_total`, histograma de probabilidade) → base para acompanhar comportamento do serviço.
+- **Caminho de observabilidade** (Prometheus → Alloy → Grafana) → infraestrutura pronta para receber KPIs quando forem instrumentados.
+
+### Como evoluir para KPIs reais (roadmap)
+
+Para transformar os quatro KPIs em métricas reais no Grafana, o próximo passo típico é:
+
+- **Ingestão de eventos**: “cliente contatado”, “oferta aplicada”, “cancelou/não cancelou”, “data do evento”, “custo” e (idealmente) “LTV”.
+- **Agregação** (batch ou streaming): jobs que consolidem por mês/campanha/segmento.
+- **Exposição**: exportar KPIs via Prometheus (ou via datasource de banco) para dashboards e alertas.
 
 ---
 
@@ -446,6 +521,19 @@ az ad sp create-for-rbac \
 
 Middleware em [`src/middleware.py`](src/middleware.py) registra contagem e duração por requisição.
 
+### Como as métricas chegam no Grafana (Prometheus → Alloy → Grafana Cloud)
+
+O projeto usa **scrape Prometheus** no endpoint público HTTPS da API e **remote write** para o Prometheus gerenciado do Grafana Cloud.
+
+- **Alvo scrape**: `https://churn-prediction-api.azurewebsites.net/api/v1/metrics/`
+- **Config do Alloy**: [`monitoring/alloy-config.alloy`](monitoring/alloy-config.alloy)
+- **Variáveis necessárias no Alloy**:
+  - `GRAFANA_CLOUD_PROM_URL`
+  - `GRAFANA_CLOUD_PROM_USER`
+  - `GRAFANA_CLOUD_PROM_PASSWORD`
+
+Na prática: **se o Alloy estiver implantado e autenticado**, tudo que aparece em `/api/v1/metrics/` passa a aparecer como séries no datasource Prometheus do Grafana.
+
 ### Grafana
 
 - Dashboard exportado: [`docs/grafana_dashboard.json`](docs/grafana_dashboard.json)  
@@ -454,6 +542,10 @@ Middleware em [`src/middleware.py`](src/middleware.py) registra contagem e dura�
 ### Grafana Alloy (Azure)
 
 Script e config: [`monitoring/`](monitoring/) — *scrape* periódico do endpoint de métricas e *remote write* (detalhes em comentários dos arquivos e em `docs/arquitetura-deploy.md`).
+
+Se você for reproduzir essa parte no Azure, o repositório já inclui um script auxiliar:
+
+- `monitoring/deploy-alloy.sh`: cria o container do Alloy (ACI) e injeta as variáveis de ambiente necessárias (tokens do Grafana Cloud).
 
 ---
 
