@@ -1,22 +1,22 @@
 services:
   # API FastAPI com metricas
-  api:
-    build: .
-    container_name: churn-api
-    ports:
-      - "8000:8000"
-    environment:
-      - ENVIRONMENT=production
-      - JWT_SECRET=test
-      - TOKEN_EXPIRE_MINUTES=60
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-    networks:
-      - monitoring
+  # api:
+  #   build: .
+  #   container_name: churn-api
+  #   ports:
+  #     - "8000:8000"
+  #   environment:
+  #     - ENVIRONMENT=production
+  #     - JWT_SECRET=test
+  #     - TOKEN_EXPIRE_MINUTES=60
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 3
+  #     start_period: 10s
+  #   networks:
+  #     - monitoring
 
   # Prometheus - Coleta metricas
   prometheus:

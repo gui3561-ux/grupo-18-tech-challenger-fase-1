@@ -1,0 +1,23 @@
+# Configuracao do Prometheus
+# Define de onde coletar metricas (scrape)
+
+global:
+  scrape_interval: 15s      # Coleta metricas a cada 15 segundos
+  evaluation_interval: 15s  # Avalia regras de alerta a cada 15 segundos
+
+# Regras de alerta (arquivo separado)
+rule_files:
+  - "alerts.yml"
+
+# Alvos de scraping
+scrape_configs:
+  # Prometheus monitora a si mesmo
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Nossa API Iris
+  - job_name: 'api-churn'
+    static_configs:
+      - targets: ['host.docker.internal:8000']  # Nome do servico no docker-compose
+    metrics_path: '/api/v1/metrics/'  # Endpoint que expoe metricas
