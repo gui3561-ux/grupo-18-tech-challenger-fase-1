@@ -78,6 +78,10 @@ check: lint format-check typecheck ## Lint + format check + mypy (sem testes)
 .PHONY: ci
 ci: lint format-check typecheck test ## Pipeline completo igual ao GitHub Actions (requer install-dev)
 
+.PHONY: lab
+lab: 
+	$(UV) run jupyter lab 
+
 # ---------------------------------------------------------------------------
 # Testes
 # ---------------------------------------------------------------------------

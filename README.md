@@ -266,7 +266,7 @@ curl -sS http://localhost:8000/api/v1/metrics/ | head -n 40
 | **Arquitetura** | MLP 128 → 64 → 32 → 1, BatchNorm, Dropout |
 | **Treino** | Focal Loss (γ = 3,0), SMOTE, *early stopping*, scheduler cosseno + *warmup* |
 
-Detalhes de hiperparâmetros, *fairness*, limitações e manutenção: **[MODEL_CARD.md](MODEL_CARD.md)**.
+Detalhes de hiperparâmetros, *fairness*, limitações e manutenção: **[MODEL_CARD.md](docs/MODEL_CARD.md)**.
 
 ---
 
@@ -603,6 +603,12 @@ O serviço usa `MODEL_PATH` (env) apontando para um `.pkl` de **Pipeline** sciki
 | Divergência local vs Docker | Local usa `pyproject.toml` completo; container usa só `requirements.txt` — alinhar versões se necessário |
 
 ---
+
+
+## Dataset 
+
+https://www.kaggle.com/datasets/yeanzc/telco-customer-churn-ibm-dataset
+
 
 ## Licença
 
